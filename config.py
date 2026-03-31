@@ -18,7 +18,7 @@ class Config:
     PERMANENT_SESSION_LIFETIME = timedelta(hours=2)
     
     # MongoDB Atlas Configuration
-    MONGODB_URI = os.environ.get('MONGODB_URI') or 'mongodb://localhost:27017/'
+    MONGODB_URI = os.environ.get('MONGODB_URI') or 'mongodb+srv://raihanagilm:agil@agil.bna2mw5.mongodb.net/'
     MONGODB_DATABASE = os.environ.get('MONGODB_DATABASE') or 'cafe_cms'
     
     # Upload Configuration
