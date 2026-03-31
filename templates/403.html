@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>403 - Akses Ditolak</title>
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 20px;
+        }
+        
+        .error-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 50px 40px;
+            text-align: center;
+            max-width: 500px;
+            width: 100%;
+            animation: fadeIn 0.5s ease;
+        }
+        
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .error-code {
+            font-size: 8rem;
+            font-weight: 700;
+            color: #ff6b6b;
+            margin-bottom: 20px;
+            text-shadow: 3px 3px 0 rgba(255, 107, 107, 0.2);
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.05);
+            }
+        }
+        
+        .error-message {
+            font-size: 1.8rem;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 15px;
+        }
+        
+        .error-description {
+            color: #666;
+            font-size: 1.1rem;
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+        
+        .btn-home {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+            color: white;
+            border: none;
+            padding: 14px 40px;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 1.1rem;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(255, 107, 107, 0.4);
+        }
+        
+        .btn-home:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(255, 107, 107, 0.6);
+        }
+        
+        .btn-home i {
+            margin-right: 8px;
+        }
+        
+        .lock-icon {
+            font-size: 3rem;
+            color: #ff6b6b;
+            margin-bottom: 20px;
+            animation: rotate 2s linear infinite;
+        }
+        
+        @keyframes rotate {
+            from {
+                transform: rotate(0deg);
+            }
+            to {
+                transform: rotate(360deg);
+            }
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .error-container {
+                padding: 40px 30px;
+                border-radius: 15px;
+            }
+            
+            .error-code {
+                font-size: 6rem;
+            }
+            
+            .error-message {
+                font-size: 1.5rem;
+            }
+            
+            .error-description {
+                font-size: 1rem;
+            }
+            
+            .btn-home {
+                padding: 12px 35px;
+                font-size: 1rem;
+            }
+            
+            .lock-icon {
+                font-size: 2.5rem;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .error-container {
+                padding: 30px 20px;
+            }
+            
+            .error-code {
+                font-size: 5rem;
+            }
+            
+            .error-message {
+                font-size: 1.3rem;
+            }
+            
+            .btn-home {
+                width: 100%;
+                padding: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="error-container">
+        <i class="fas fa-lock lock-icon"></i>
+        <div class="error-code">403</div>
+        <div class="error-message">Akses Ditolak</div>
+        <div class="error-description">
+            Maaf, Anda tidak memiliki izin untuk mengakses halaman ini.<br>
+            Silakan hubungi administrator jika Anda merasa ini adalah kesalahan.
+        </div>
+        <a href="{{ url_for('main.home') }}" class="btn-home">
+            <i class="fas fa-home"></i> Kembali ke Home
+        </a>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

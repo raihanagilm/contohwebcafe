@@ -1,0 +1,765 @@
+{% extends "base.html" %}
+
+{% block title %}Menu - {{ settings.cafe_name if settings else 'Cafe' }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* ═══════════════════════════════════════════════════════════
+       MENU HERO SECTION
+       ═══════════════════════════════════════════════════════════ */
+    .menu-hero {
+        padding: 4rem 0 3rem;
+        text-align: center;
+        background: linear-gradient(135deg, var(--cream-warm) 0%, var(--cream) 100%);
+        border-radius: var(--radius-lg);
+        margin-bottom: 3rem;
+    }
+    
+    .menu-hero h1 {
+        font-family: var(--font-elegant);
+        font-size: clamp(2rem, 5vw, 3rem);
+        color: var(--brown-dark);
+        margin-bottom: 1rem;
+        font-weight: 700;
+    }
+    
+    .menu-hero .lead {
+        font-size: clamp(1rem, 3vw, 1.2rem);
+        color: var(--text-medium);
+        max-width: 600px;
+        margin: 0 auto;
+        line-height: 1.6;
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       CATEGORY FILTER
+       ═══════════════════════════════════════════════════════════ */
+    .category-filter {
+        padding: 2rem 0;
+        margin-bottom: 2rem;
+    }
+    
+    .category-buttons {
+        display: flex;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+    }
+    
+    .category-btn {
+        padding: 0.6rem 1.25rem;
+        border: 2px solid var(--cream-dark);
+        background: var(--white);
+        border-radius: var(--radius-full);
+        cursor: pointer;
+        font-weight: 600;
+        transition: all var(--transition-fast);
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: var(--brown);
+        font-size: 0.9rem;
+        white-space: nowrap;
+        box-shadow: var(--shadow-sm);
+    }
+    
+    .category-btn:hover {
+        background: var(--orange-gradient);
+        border-color: var(--orange-primary);
+        color: var(--brown-dark);
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-orange);
+    }
+    
+    .category-btn.active {
+        background: var(--orange-gradient);
+        border-color: var(--orange-primary);
+        color: var(--brown-dark);
+        box-shadow: var(--shadow-orange);
+    }
+    
+    .category-btn i {
+        font-size: 0.85rem;
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       MENU CAROUSEL - MOBILE (HORIZONTAL SCROLL)
+       ═══════════════════════════════════════════════════════════ */
+    .menu-carousel-wrapper {
+        position: relative;
+        overflow: hidden;
+        padding: 1rem 0;
+        min-height: 400px;
+    }
+    
+    .menu-carousel {
+        display: flex;
+        gap: 1.5rem;
+        overflow-x: auto;
+        scroll-snap-type: x mandatory;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        padding: 1rem 5%;
+        margin: 0 -5%;
+        scroll-behavior: smooth;
+    }
+    
+    .menu-carousel::-webkit-scrollbar {
+        display: none;
+    }
+    
+    .menu-carousel-item {
+        flex: 0 0 auto;
+        width: clamp(260px, 85vw, 280px);
+        scroll-snap-align: center;
+    }
+    
+    .menu-carousel-wrapper.no-scroll .scroll-hint {
+        display: none !important;
+    }
+    
+    .menu-carousel-wrapper.no-scroll .menu-carousel {
+        overflow-x: visible;
+        scroll-snap-type: none;
+        -webkit-overflow-scrolling: auto;
+        justify-content: center;
+        padding: 1rem 0;
+        margin: 0;
+    }
+    
+    .menu-carousel-wrapper.no-scroll .menu-carousel-item {
+        scroll-snap-align: none;
+    }
+
+    /* Scroll Hint */
+    .scroll-hint {
+        text-align: center;
+        color: var(--text-light);
+        font-size: 0.85rem;
+        margin-top: 1rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        transition: opacity 0.5s ease;
+    }
+    
+    .scroll-hint i {
+        animation: scrollBounce 1.5s infinite;
+        color: var(--orange-primary);
+    }
+    
+    @keyframes scrollBounce {
+        0%, 100% { transform: translateX(0); }
+        50% { transform: translateX(8px); }
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       MENU GRID - DESKTOP
+       ═══════════════════════════════════════════════════════════ */
+    .menu-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 1.5rem;
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       MENU CARD (SHARED)
+       ═══════════════════════════════════════════════════════════ */
+    .menu-card {
+        background: var(--white);
+        border-radius: var(--radius-lg);
+        overflow: hidden;
+        box-shadow: var(--shadow-md);
+        transition: all var(--transition-normal);
+        border: 1px solid var(--cream-dark);
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .menu-card:hover {
+        transform: translateY(-8px);
+        box-shadow: var(--shadow-xl);
+        border-color: var(--orange-light);
+    }
+    
+    .menu-card-image {
+        position: relative;
+        height: 200px;
+        overflow: hidden;
+        background: var(--cream-dark);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .menu-card-image img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform var(--transition-normal);
+    }
+    
+    .menu-card-image .placeholder-icon {
+        font-size: 4rem;
+        color: var(--brown-light);
+        opacity: 0.5;
+    }
+    
+    .menu-card:hover .menu-card-image img {
+        transform: scale(1.1);
+    }
+    
+    .menu-card-badge {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        background: var(--orange-gradient);
+        color: var(--brown-dark);
+        padding: 6px 14px;
+        border-radius: var(--radius-full);
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        box-shadow: var(--shadow-sm);
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+    
+    .menu-card-badge.soon {
+        background: linear-gradient(135deg, #dc3545, #ef4444);
+        color: white;
+    }
+    
+    .menu-card-badge.recommended {
+        background: linear-gradient(135deg, #ffd700, #ffb700);
+        color: var(--brown-dark);
+    }
+    
+    .menu-card-body {
+        padding: 1.25rem;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .menu-card-category {
+        font-size: 0.75rem;
+        color: var(--orange-primary);
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        margin-bottom: 0.5rem;
+    }
+    
+    .menu-card-title {
+        font-family: var(--font-display);
+        font-size: 1.2rem;
+        color: var(--brown-dark);
+        margin-bottom: 0.5rem;
+        font-weight: 600;
+        line-height: 1.3;
+    }
+    
+    .menu-card-description {
+        font-size: 0.9rem;
+        color: var(--text-light);
+        margin-bottom: 1rem;
+        flex: 1;
+        line-height: 1.6;
+    }
+    
+    .menu-card-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-top: 1rem;
+        border-top: 2px solid var(--cream-dark);
+    }
+    
+    .menu-card-price {
+        font-family: var(--font-display);
+        font-size: 1.3rem;
+        font-weight: 700;
+        color: var(--orange-primary);
+    }
+
+    /* Empty State */
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        color: var(--text-light);
+        display: none;
+    }
+    
+    .empty-state.show {
+        display: block;
+        animation: fadeIn 0.5s ease;
+    }
+    
+    .empty-state i {
+        font-size: 4rem;
+        color: var(--cream-dark);
+        opacity: 0.5;
+        margin-bottom: 1rem;
+    }
+    
+    .empty-state h3 {
+        font-family: var(--font-display);
+        color: var(--brown-dark);
+        margin-bottom: 0.5rem;
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       CTA SECTION
+       ═══════════════════════════════════════════════════════════ */
+    .menu-cta {
+        padding: 4rem 2rem;
+        background: var(--orange-gradient);
+        border-radius: var(--radius-xl);
+        text-align: center;
+        margin: 3rem 0;
+        box-shadow: var(--shadow-orange);
+    }
+    
+    .menu-cta h2 {
+        font-family: var(--font-elegant);
+        color: var(--brown-dark);
+        margin-bottom: 1rem;
+    }
+    
+    .menu-cta p {
+        color: var(--brown);
+        margin-bottom: 2rem;
+        font-size: 1.1rem;
+    }
+    
+    .cta-buttons {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 1rem;
+    }
+    
+    .btn-cta-primary {
+        background: var(--brown-dark);
+        color: var(--white);
+        padding: 1rem 2.5rem;
+        border-radius: var(--radius-full);
+        font-weight: 700;
+        transition: all var(--transition-normal);
+        box-shadow: var(--shadow-md);
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .btn-cta-primary:hover {
+        background: var(--brown);
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-lg);
+        color: var(--white);
+    }
+    
+    .btn-cta-secondary {
+        background: var(--white);
+        color: var(--brown-dark);
+        padding: 1rem 2.5rem;
+        border-radius: var(--radius-full);
+        font-weight: 700;
+        transition: all var(--transition-normal);
+        border: 2px solid var(--brown-dark);
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .btn-cta-secondary:hover {
+        background: var(--brown-dark);
+        color: var(--white);
+        transform: translateY(-4px);
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       RESPONSIVE
+       ═══════════════════════════════════════════════════════════ */
+    @media (max-width: 768px) {
+        .menu-hero {
+            padding: 3rem 0 2rem;
+        }
+        
+        .menu-grid {
+            display: none !important;
+        }
+        
+        .menu-carousel-wrapper {
+            display: block !important;
+        }
+        
+        .scroll-hint {
+            display: flex !important;
+        }
+        
+        .menu-cta {
+            padding: 3rem 1.5rem;
+        }
+        
+        .cta-buttons {
+            flex-direction: column;
+            align-items: stretch;
+        }
+        
+        .btn-cta-primary,
+        .btn-cta-secondary {
+            justify-content: center;
+        }
+        
+        .menu-carousel-item {
+            width: clamp(260px, 85vw, 280px);
+        }
+        
+        .menu-carousel {
+            padding: 1rem calc((100vw - clamp(260px, 85vw, 280px)) / 2);
+            margin: 0;
+        }
+    }
+    
+    @media (min-width: 769px) {
+        .menu-grid {
+            display: grid !important;
+        }
+        
+        .menu-carousel-wrapper {
+            display: none !important;
+        }
+        
+        .scroll-hint {
+            display: none !important;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- ═══════════════════════════════════════════════════════════
+     MENU HERO SECTION
+     ═══════════════════════════════════════════════════════════ -->
+<section class="menu-hero">
+    <div class="container">
+        <h1>☕ Menu Kami</h1>
+        <p class="lead">Nikmati pilihan kopi dan hidangan terbaik di {{ settings.cafe_name if settings else 'Cafe' }}</p>
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════
+     CATEGORY FILTER SECTION
+     ═══════════════════════════════════════════════════════════ -->
+<section class="category-filter">
+    <div class="container">
+        <div class="category-buttons">
+            <button class="category-btn active" data-category="all">
+                <i class="fas fa-utensils"></i> Semua
+            </button>
+            {% for category in categories %}
+            <button class="category-btn" data-category="{{ category }}">
+                <i class="fas fa-tag"></i> {{ category|capitalize }}
+            </button>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════
+     MENU SECTION - MOBILE (CAROUSEL) & DESKTOP (GRID)
+     ═══════════════════════════════════════════════════════════ -->
+<section class="menu-section">
+    <div class="container">
+        <!-- MOBILE: Horizontal Carousel -->
+        <div class="menu-carousel-wrapper" id="menuCarouselWrapper">
+            <div class="menu-carousel" id="menuCarousel">
+                {% if menu and menu|length > 0 %}
+                    {% for item in menu %}
+                    <div class="menu-carousel-item" data-category="{{ item.category }}">
+                        <div class="menu-card">
+                            <div class="menu-card-image">
+                                {# ✅ CEK image_data DARI DB #}
+                                {% if item.image_data %}
+                                    {# ✅ ADA image_data = call endpoint #}
+                                    <img src="{{ url_for('main.serve_menu_image', menu_id=item._id) }}" 
+                                         alt="{{ item.name }}" 
+                                         loading="lazy"
+                                         onerror="this.onerror=null; this.parentElement.innerHTML='<i class=\'fas fa-utensils placeholder-icon\'></i>'">
+                                {% else %}
+                                    {# ✅ TIDAK ADA image_data = LANGSUNG ICON (tidak call endpoint) #}
+                                    <i class="fas fa-utensils placeholder-icon"></i>
+                                {% endif %}
+                                
+                                {% if item.is_recommended|default(false) %}
+                                <span class="menu-card-badge recommended">
+                                    <i class="fas fa-star"></i> Recommended
+                                </span>
+                                {% endif %}
+                                
+                                {% if not item.available %}
+                                <span class="menu-card-badge soon">
+                                    <i class="fas fa-clock"></i> Soon
+                                </span>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="menu-card-body">
+                                <span class="menu-card-category">{{ item.category|capitalize }}</span>
+                                <h3 class="menu-card-title">{{ item.name }}</h3>
+                                <p class="menu-card-description">{{ item.description|truncate(60) }}</p>
+                                
+                                <div class="menu-card-footer">
+                                    <span class="menu-card-price">Rp {{ "{:,}".format(item.price) }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="menu-carousel-item">
+                        <div class="empty-state show" style="width: 100%;">
+                            <i class="fas fa-utensils"></i>
+                            <h3>Menu Belum Tersedia</h3>
+                            <p>Admin belum menambahkan menu.</p>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+            
+            <!-- Scroll Hint (Mobile Only) -->
+            <div class="scroll-hint" id="scrollHint">
+                <i class="fas fa-arrow-right"></i>
+                <span>Swipe untuk melihat menu lainnya</span>
+                <i class="fas fa-arrow-right"></i>
+            </div>
+        </div>
+        
+        <!-- DESKTOP: Grid Layout -->
+        <div class="menu-grid" id="menuGrid">
+            {% if menu and menu|length > 0 %}
+                {% for item in menu %}
+                <div class="menu-card" data-category="{{ item.category }}">
+                    <div class="menu-card-image">
+                        {# ✅ CEK image_data DARI DB #}
+                        {% if item.image_data %}
+                            {# ✅ ADA image_data = call endpoint #}
+                            <img src="{{ url_for('main.serve_menu_image', menu_id=item._id) }}" 
+                                 alt="{{ item.name }}" 
+                                 loading="lazy"
+                                 onerror="this.onerror=null; this.parentElement.innerHTML='<i class=\'fas fa-utensils placeholder-icon\'></i>'">
+                        {% else %}
+                            {# ✅ TIDAK ADA image_data = LANGSUNG ICON (tidak call endpoint) #}
+                            <i class="fas fa-utensils placeholder-icon"></i>
+                        {% endif %}
+                        
+                        {% if item.is_recommended|default(false) %}
+                        <span class="menu-card-badge recommended">
+                            <i class="fas fa-star"></i> Recommended
+                        </span>
+                        {% endif %}
+                        
+                        {% if not item.available %}
+                        <span class="menu-card-badge soon">
+                            <i class="fas fa-clock"></i> Soon
+                        </span>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="menu-card-body">
+                        <span class="menu-card-category">{{ item.category|capitalize }}</span>
+                        <h3 class="menu-card-title">{{ item.name }}</h3>
+                        <p class="menu-card-description">{{ item.description|truncate(100) }}</p>
+                        
+                        <div class="menu-card-footer">
+                            <span class="menu-card-price">Rp {{ "{:,}".format(item.price) }}</span>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="empty-state show" style="grid-column: 1/-1;">
+                    <i class="fas fa-utensils"></i>
+                    <h3>Menu Belum Tersedia</h3>
+                    <p>Admin belum menambahkan menu. Silakan kembali nanti!</p>
+                </div>
+            {% endif %}
+        </div>
+        
+        <!-- Empty State for Category Filter -->
+        <div id="categoryEmptyState" class="empty-state">
+            <i class="fas fa-inbox"></i>
+            <h3>Kategori Kosong</h3>
+            <p>Tidak ada menu dalam kategori ini.</p>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════
+     CTA SECTION
+     ═══════════════════════════════════════════════════════════ -->
+<section class="menu-cta">
+    <div class="container">
+        <h2>Siap Memesan?</h2>
+        <p>Kunjungi cafe kami atau pesan via WhatsApp untuk pengalaman terbaik.</p>
+        <div class="cta-buttons">
+            {% if settings and settings.whatsapp_number %}
+            <a href="https://wa.me/{{ settings.whatsapp_number }}" class="btn-cta-primary" target="_blank" rel="noopener">
+                <i class="fab fa-whatsapp"></i> Pesan via WhatsApp
+            </a>
+            {% endif %}
+            <a href="{{ url_for('main.contact_page') }}" class="btn-cta-secondary">
+                <i class="fas fa-map-marker-alt"></i> Kunjungi Kami
+            </a>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const categoryButtons = document.querySelectorAll('.category-btn');
+    const menuCarousel = document.getElementById('menuCarousel');
+    const menuGrid = document.getElementById('menuGrid');
+    const carouselWrapper = document.getElementById('menuCarouselWrapper');
+    const scrollHint = document.getElementById('scrollHint');
+    const categoryEmptyState = document.getElementById('categoryEmptyState');
+    
+    // ✅ CHECK: Apakah carousel perlu scroll?
+    function checkCarouselScroll() {
+        if (!menuCarousel || !carouselWrapper) return;
+        if (window.innerWidth > 768) return;
+        
+        setTimeout(function() {
+            const visibleItems = Array.from(menuCarousel.querySelectorAll('.menu-carousel-item:not([style*="display: none"])'));
+            
+            if (visibleItems.length === 0) {
+                carouselWrapper.classList.add('no-scroll');
+                return;
+            }
+            
+            let totalContentWidth = 0;
+            const gap = 24;
+            
+            visibleItems.forEach(function(item) {
+                totalContentWidth += item.offsetWidth;
+            });
+            
+            if (visibleItems.length > 1) {
+                totalContentWidth += gap * (visibleItems.length - 1);
+            }
+            
+            const containerWidth = menuCarousel.clientWidth;
+            const canScroll = totalContentWidth > (containerWidth + 10);
+            
+            if (canScroll) {
+                carouselWrapper.classList.remove('no-scroll');
+            } else {
+                carouselWrapper.classList.add('no-scroll');
+            }
+        }, 200);
+    }
+    
+    // Auto-hide scroll hint after first scroll
+    if (menuCarousel && scrollHint) {
+        let hasScrolled = false;
+        menuCarousel.addEventListener('scroll', function() {
+            if (!hasScrolled && menuCarousel.scrollLeft > 50) {
+                hasScrolled = true;
+                scrollHint.style.opacity = '0';
+                scrollHint.style.transition = 'opacity 0.5s ease';
+                setTimeout(function() { 
+                    scrollHint.style.display = 'none'; 
+                }, 500);
+            }
+        });
+    }
+    
+    // ✅ Category Filter - Client Side
+    categoryButtons.forEach(function(button) {
+        button.addEventListener('click', function() {
+            // Update active state
+            categoryButtons.forEach(function(btn) { 
+                btn.classList.remove('active'); 
+            });
+            this.classList.add('active');
+            
+            const selectedCategory = this.getAttribute('data-category');
+            let visibleCount = 0;
+            
+            // ✅ Filter Mobile Carousel Items
+            const carouselItems = menuCarousel.querySelectorAll('.menu-carousel-item');
+            carouselItems.forEach(function(item) {
+                const emptyState = item.querySelector('.empty-state');
+                if (emptyState) {
+                    item.style.display = 'block';
+                    return;
+                }
+                
+                const itemCategory = item.getAttribute('data-category');
+                
+                if (selectedCategory === 'all' || itemCategory === selectedCategory) {
+                    item.style.display = 'block';
+                    visibleCount++;
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+            
+            // ✅ Filter Desktop Grid Items
+            const gridItems = menuGrid.querySelectorAll('.menu-card');
+            gridItems.forEach(function(item) {
+                const itemCategory = item.getAttribute('data-category');
+                
+                if (selectedCategory === 'all' || itemCategory === selectedCategory) {
+                    item.style.display = 'flex';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+            
+            // Show/hide empty state
+            if (visibleCount === 0 && selectedCategory !== 'all') {
+                categoryEmptyState.classList.add('show');
+            } else {
+                categoryEmptyState.classList.remove('show');
+            }
+            
+            // Reset carousel scroll position
+            if (menuCarousel) {
+                menuCarousel.scrollLeft = 0;
+            }
+            
+            // ✅ Re-check scroll ability after filtering
+            setTimeout(checkCarouselScroll, 100);
+            setTimeout(checkCarouselScroll, 300);
+        });
+    });
+    
+    // Initial check
+    setTimeout(checkCarouselScroll, 100);
+    setTimeout(checkCarouselScroll, 500);
+    
+    // Check scroll on resize
+    let resizeTimeout;
+    window.addEventListener('resize', function() {
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(checkCarouselScroll, 200);
+    });
+});
+</script>
+{% endblock %}

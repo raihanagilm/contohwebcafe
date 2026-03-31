@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>500 - Kesalahan Server</title>
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #ff9a9e 0%, #fad0c4 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 20px;
+        }
+        
+        .error-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 50px 40px;
+            text-align: center;
+            max-width: 500px;
+            width: 100%;
+            animation: fadeIn 0.5s ease;
+        }
+        
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .error-code {
+            font-size: 8rem;
+            font-weight: 700;
+            color: #ff9a9e;
+            margin-bottom: 20px;
+            text-shadow: 3px 3px 0 rgba(255, 154, 158, 0.2);
+            animation: shake 0.5s ease-in-out infinite;
+        }
+        
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+        
+        .error-message {
+            font-size: 1.8rem;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 15px;
+        }
+        
+        .error-description {
+            color: #666;
+            font-size: 1.1rem;
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+        
+        .btn-home {
+            background: linear-gradient(135deg, #ff9a9e 0%, #fad0c4 100%);
+            color: white;
+            border: none;
+            padding: 14px 40px;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 1.1rem;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(255, 154, 158, 0.4);
+        }
+        
+        .btn-home:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(255, 154, 158, 0.6);
+        }
+        
+        .btn-home i {
+            margin-right: 8px;
+        }
+        
+        .bug-icon {
+            font-size: 3rem;
+            color: #ff9a9e;
+            margin-bottom: 20px;
+            animation: float 3s ease-in-out infinite;
+        }
+        
+        @keyframes float {
+            0%, 100% {
+                transform: translateY(0);
+            }
+            50% {
+                transform: translateY(-10px);
+            }
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .error-container {
+                padding: 40px 30px;
+                border-radius: 15px;
+            }
+            
+            .error-code {
+                font-size: 6rem;
+            }
+            
+            .error-message {
+                font-size: 1.5rem;
+            }
+            
+            .error-description {
+                font-size: 1rem;
+            }
+            
+            .btn-home {
+                padding: 12px 35px;
+                font-size: 1rem;
+            }
+            
+            .bug-icon {
+                font-size: 2.5rem;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .error-container {
+                padding: 30px 20px;
+            }
+            
+            .error-code {
+                font-size: 5rem;
+            }
+            
+            .error-message {
+                font-size: 1.3rem;
+            }
+            
+            .btn-home {
+                width: 100%;
+                padding: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="error-container">
+        <i class="fas fa-bug bug-icon"></i>
+        <div class="error-code">500</div>
+        <div class="error-message">Kesalahan Server</div>
+        <div class="error-description">
+            Oops! Terjadi kesalahan pada server kami.<br>
+            Tim kami sudah diberitahu dan akan segera memperbaikinya.<br>
+            Mohon maaf atas ketidaknyamanannya.
+        </div>
+        <a href="{{ url_for('main.home') }}" class="btn-home">
+            <i class="fas fa-home"></i> Kembali ke Home
+        </a>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

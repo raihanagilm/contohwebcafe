@@ -1,0 +1,606 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Social Media Management - Management Cafe Admin{% endblock %}
+
+{% block content %}
+<div class="page-title">
+    <h1><i class="fas fa-share-alt text-orange"></i> Manajemen Social Media</h1>
+    <p>Kelola link social media cafe Anda</p>
+</div>
+
+<!-- Filter dan Tombol Aksi -->
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-body">
+        <div class="row align-items-center">
+            <div class="col-md-4 mb-2 mb-md-0">
+                <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-search"></i></span>
+                    <input type="text" class="form-control" id="searchSocial" placeholder="Cari social media...">
+                </div>
+            </div>
+            <div class="col-md-3 mb-2 mb-md-0">
+                <select class="form-select" id="filterVisibility">
+                    <option value="">Semua</option>
+                    <option value="visible">Visible</option>
+                    <option value="hidden">Hidden</option>
+                </select>
+            </div>
+            <div class="col-md-5 text-md-end text-center mt-2 mt-md-0">
+                <button type="button" class="btn btn-elegant" data-bs-toggle="modal" data-bs-target="#socialModal" onclick="resetForm()">
+                    <i class="fas fa-plus"></i> Tambah Social Media
+                </button>
+                <button type="button" class="btn btn-outline-secondary" onclick="toggleGridView()">
+                    <i class="fas fa-th-large" id="viewIcon"></i> <span id="viewText">Grid</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Social Media Cards (Grid View) -->
+<div id="gridView" class="row g-3">
+    {% for link in social %}
+    <div class="col-md-4 col-lg-3" 
+         data-name="{{ link.platform|lower }}" 
+         data-url="{{ link.url|lower }}"
+         data-visible="{{ 'visible' if link.visible|default(true) else 'hidden' }}">
+        <div class="card h-100 shadow-sm border-0 card-elegant">
+            <div class="card-body d-flex flex-column">
+                <div class="text-center mb-3">
+                    <div class="social-icon rounded-circle d-flex align-items-center justify-content-center mx-auto" 
+                         style="width: 80px; height: 80px; font-size: 2rem;"
+                         data-icon="{{ link.icon if link.icon else 'fas fa-link' }}">
+                        <!-- ✅ GUNAKAN ICON DARI DATABASE -->
+                        <i class="{{ link.icon if link.icon else 'fas fa-link' }}"></i>
+                    </div>
+                </div>
+                
+                <h6 class="card-title text-center mb-2">
+                    <i class="{{ link.icon if link.icon else 'fas fa-link' }}"></i> {{ link.platform|capitalize }}
+                </h6>
+                
+                <div class="mb-3">
+                    <p class="card-text small text-muted text-center mb-1">
+                        <i class="fas fa-link"></i> URL
+                    </p>
+                    <a href="{{ link.url }}" target="_blank" class="card-text small text-primary text-decoration-none d-block text-truncate">
+                        {{ link.url }}
+                    </a>
+                </div>
+                
+                <div class="mt-auto">
+                    <!-- Visibility Badge -->
+                    <div class="mb-2 text-center">
+                        {% if link.visible|default(true) %}
+                        <span class="badge" style="background: var(--orange-primary);"><i class="fas fa-eye"></i> Visible</span>
+                        {% else %}
+                        <span class="badge bg-warning text-dark"><i class="fas fa-eye-slash"></i> Hidden</span>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="d-flex justify-content-between">
+                        <button class="btn btn-sm btn-outline-primary" onclick="editSocial('{{ link._id }}')">
+                            <i class="fas fa-edit"></i> Edit
+                        </button>
+                        <form method="POST" action="{{ url_for('social.social_delete', link_id=link._id) }}" style="display: inline;" onsubmit="return confirmDelete('{{ link.platform }}')">
+                            <button type="submit" class="btn btn-sm btn-outline-danger">
+                                <i class="fas fa-trash"></i> Hapus
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="col-12 text-center py-5">
+        <i class="fas fa-share-alt fa-3x text-muted mb-3"></i>
+        <h5 class="text-muted">Belum ada social media</h5>
+        <p class="text-muted">Klik tombol "Tambah Social Media" untuk menambahkan link social media pertama Anda</p>
+        <button type="button" class="btn btn-elegant" data-bs-toggle="modal" data-bs-target="#socialModal" onclick="resetForm()">
+            <i class="fas fa-plus"></i> Tambah Social Media Sekarang
+        </button>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Social Media Table (List View) -->
+<div id="listView" class="card border-0 shadow-sm d-none">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width: 50px;" class="sortable" data-sort="index"># <i class="fas fa-sort sort-icon"></i></th>
+                        <th style="width: 60px;">Icon</th>
+                        <th class="sortable" data-sort="platform">Platform <i class="fas fa-sort sort-icon"></i></th>
+                        <th class="sortable" data-sort="url">URL <i class="fas fa-sort sort-icon"></i></th>
+                        <th class="sortable" data-sort="visibility">Visibility <i class="fas fa-sort sort-icon"></i></th>
+                        <th style="width: 120px;">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for link in social %}
+                    <tr data-name="{{ link.platform|lower }}" 
+                        data-index="{{ loop.index }}" 
+                        data-url="{{ link.url|lower }}"
+                        data-visibility="{{ '1' if link.visible|default(true) else '0' }}">
+                        <td class="text-center">{{ loop.index }}</td>
+                        <td class="text-center">
+                            <!-- ✅ GUNAKAN ICON DARI DATABASE -->
+                            <i class="{{ link.icon if link.icon else 'fas fa-link' }} fa-2x"></i>
+                        </td>
+                        <td>
+                            <strong>
+                                <i class="{{ link.icon if link.icon else 'fas fa-link' }}"></i> 
+                                {{ link.platform|capitalize }}
+                            </strong>
+                        </td>
+                        <td>
+                            <a href="{{ link.url }}" target="_blank" class="text-primary text-decoration-none">
+                                <i class="fas fa-external-link-alt"></i> {{ link.url|truncate(50) }}
+                            </a>
+                        </td>
+                        <td>
+                            {% if link.visible|default(true) %}
+                            <span class="badge" style="background: var(--orange-primary);"><i class="fas fa-eye"></i> Visible</span>
+                            {% else %}
+                            <span class="badge bg-warning text-dark"><i class="fas fa-eye-slash"></i> Hidden</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-primary mb-1" onclick="editSocial('{{ link._id }}')">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <form method="POST" action="{{ url_for('social.social_delete', link_id=link._id) }}" style="display: inline;" onsubmit="return confirmDelete('{{ link.platform }}')">
+                                <button type="submit" class="btn btn-sm btn-danger">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Social Media Modal -->
+<div class="modal fade" id="socialModal" tabindex="-1" aria-labelledby="socialModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-md">
+        <div class="modal-content">
+            <form method="POST" id="socialForm">
+                <input type="hidden" name="link_id" id="link_id">
+                
+                <div class="modal-header" style="background: var(--orange-gradient);">
+                    <h5 class="modal-title" id="socialModalLabel" style="color: var(--brown-dark);">
+                        <i class="fas fa-plus-circle"></i> Tambah Social Media Baru
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Platform Social Media <span class="text-danger">*</span></label>
+                        <select class="form-select" name="platform" id="platform" required onchange="updateIconPreview()">
+                            <option value="">Pilih Platform</option>
+                            <option value="facebook">Facebook</option>
+                            <option value="instagram">Instagram</option>
+                            <option value="twitter">Twitter / X</option>
+                            <option value="whatsapp">WhatsApp</option>
+                            <option value="youtube">YouTube</option>
+                            <option value="tiktok">TikTok</option>
+                            <option value="linkedin">LinkedIn</option>
+                            <option value="github">GitHub</option>
+                            <option value="pinterest">Pinterest</option>
+                            <option value="reddit">Reddit</option>
+                            <option value="snapchat">Snapchat</option>
+                            <option value="telegram">Telegram</option>
+                            <option value="discord">Discord</option>
+                            <option value="spotify">Spotify</option>
+                        </select>
+                        <small class="text-muted">Pilih platform social media yang ingin ditambahkan</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">URL Social Media <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-link"></i></span>
+                            <input type="url" class="form-control" name="url" id="url" placeholder="https://www.instagram.com/username" required>
+                        </div>
+                        <small class="text-muted">Masukkan URL lengkap dari profil social media Anda</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Visibility</label>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" name="visible" id="visible" checked>
+                            <label class="form-check-label" for="visible">
+                                <i class="fas fa-eye"></i> Visible (Tampilkan di website)
+                            </label>
+                        </div>
+                        <small class="text-muted">Jika tidak dicentang, link tidak akan ditampilkan di website publik</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Custom Icon (Opsional)</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-icons"></i></span>
+                            <input type="text" class="form-control" name="icon" id="icon" placeholder="fab fa-instagram" value="fas fa-link">
+                        </div>
+                        <small class="text-muted">
+                            Format: "fab fa-instagram" atau "fas fa-link". 
+                            <a href="https://fontawesome.com/icons" target="_blank" class="text-orange">Lihat semua icon</a>
+                        </small>
+                    </div>
+                    
+                    <div class="mb-3 text-center p-3 rounded" style="background: var(--cream-dark);">
+                        <h6 class="mb-2">Preview Icon</h6>
+                        <div id="iconPreview" class="fs-1 text-orange">
+                            <i class="fas fa-link"></i>
+                        </div>
+                        <small class="text-muted">Preview icon yang akan ditampilkan</small>
+                    </div>
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times"></i> Batal
+                    </button>
+                    <button type="submit" class="btn btn-elegant">
+                        <i class="fas fa-save"></i> Simpan Link
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// Platform to Icon Mapping
+const platformIcons = {
+    'facebook': 'fab fa-facebook',
+    'instagram': 'fab fa-instagram',
+    'twitter': 'fab fa-twitter',
+    'whatsapp': 'fab fa-whatsapp',
+    'youtube': 'fab fa-youtube',
+    'tiktok': 'fab fa-tiktok',
+    'linkedin': 'fab fa-linkedin',
+    'github': 'fab fa-github',
+    'pinterest': 'fab fa-pinterest',
+    'reddit': 'fab fa-reddit',
+    'snapchat': 'fab fa-snapchat',
+    'telegram': 'fab fa-telegram',
+    'discord': 'fab fa-discord',
+    'spotify': 'fab fa-spotify'
+};
+
+// ========== TOGGLE VIEW WITH LOCALSTORAGE ==========
+let isGridView = localStorage.getItem('social_view') === 'grid';
+
+function toggleGridView() {
+    isGridView = !isGridView;
+    localStorage.setItem('social_view', isGridView ? 'grid' : 'list');
+    
+    document.getElementById('gridView').classList.toggle('d-none');
+    document.getElementById('listView').classList.toggle('d-none');
+    
+    const icon = document.getElementById('viewIcon');
+    const text = document.getElementById('viewText');
+    
+    if (isGridView) {
+        icon.className = 'fas fa-th-large';
+        text.textContent = 'Grid';
+    } else {
+        icon.className = 'fas fa-list';
+        text.textContent = 'List';
+    }
+}
+
+// ========== SORTING WITH LOCALSTORAGE (PERSISTEN) ==========
+let sortState = JSON.parse(localStorage.getItem('social_sort')) || { column: null, direction: 'asc' };
+
+function saveSortState() {
+    localStorage.setItem('social_sort', JSON.stringify(sortState));
+}
+
+function sortTable(column, fromLoad = false) {
+    const table = document.querySelector('#listView table');
+    if (!table) return;
+    
+    const tbody = table.querySelector('tbody');
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+    
+    // Jika dari klik user, update state. Jika dari load, gunakan state yang ada.
+    if (!fromLoad) {
+        if (sortState.column === column) {
+            sortState.direction = sortState.direction === 'asc' ? 'desc' : 'asc';
+        } else {
+            sortState.column = column;
+            sortState.direction = 'asc';
+        }
+        saveSortState();
+    }
+    
+    const sortDirection = sortState.direction;
+    
+    // Reset semua icon sort
+    table.querySelectorAll('.sort-icon').forEach(icon => {
+        icon.className = 'fas fa-sort sort-icon';
+    });
+    
+    // Update icon kolom yang aktif
+    const currentHeader = table.querySelector(`.sortable[data-sort="${column}"]`);
+    if (currentHeader) {
+        const sortIcon = currentHeader.querySelector('.sort-icon');
+        if (sortIcon) {
+            sortIcon.className = sortDirection === 'asc' ? 'fas fa-sort-up sort-icon' : 'fas fa-sort-down sort-icon';
+        }
+    }
+    
+    // Sort rows berdasarkan data attribute
+    rows.sort((a, b) => {
+        let aValue, bValue;
+        
+        if (column === 'index') {
+            aValue = parseInt(a.dataset.index) || 0;
+            bValue = parseInt(b.dataset.index) || 0;
+        } else if (column === 'platform') {
+            aValue = (a.dataset.name || '').toLowerCase();
+            bValue = (b.dataset.name || '').toLowerCase();
+        } else if (column === 'url') {
+            aValue = (a.dataset.url || '').toLowerCase();
+            bValue = (b.dataset.url || '').toLowerCase();
+        } else if (column === 'visibility') {
+            aValue = parseInt(a.dataset.visibility) || 0;
+            bValue = parseInt(b.dataset.visibility) || 0;
+        } else {
+            return 0;
+        }
+        
+        if (sortDirection === 'asc') {
+            return aValue > bValue ? 1 : (aValue < bValue ? -1 : 0);
+        } else {
+            return aValue < bValue ? 1 : (aValue > bValue ? -1 : 0);
+        }
+    });
+    
+    // Re-append rows yang sudah di-sort
+    rows.forEach(row => tbody.appendChild(row));
+    
+    // Update nomor urut (mulai dari 1)
+    updateRowNumbers();
+    
+    // Restore icon sort setelah re-render
+    updateSortIcons();
+}
+
+function updateRowNumbers() {
+    const rows = document.querySelectorAll('#listView tbody tr');
+    rows.forEach((row, index) => {
+        const numberCell = row.querySelector('td:first-child');
+        if (numberCell) {
+            numberCell.textContent = index + 1; // ✅ Mulai dari 1
+        }
+    });
+}
+
+function updateSortIcons() {
+    const table = document.querySelector('#listView table');
+    if (!table) return;
+    
+    // Reset semua icon
+    table.querySelectorAll('.sort-icon').forEach(icon => {
+        icon.className = 'fas fa-sort sort-icon';
+    });
+    
+    // Restore icon sesuai state tersimpan
+    if (sortState.column) {
+        const currentHeader = table.querySelector(`.sortable[data-sort="${sortState.column}"]`);
+        if (currentHeader) {
+            const sortIcon = currentHeader.querySelector('.sort-icon');
+            if (sortIcon) {
+                sortIcon.className = sortState.direction === 'asc' ? 'fas fa-sort-up sort-icon' : 'fas fa-sort-down sort-icon';
+            }
+        }
+    }
+}
+
+function applySavedSort() {
+    // ✅ Apply sort hanya jika ada column yang tersimpan
+    if (sortState.column) {
+        sortTable(sortState.column, true); // true = dari load, jangan toggle direction
+    }
+}
+
+// ========== EVENT LISTENERS ==========
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize view state dari localStorage
+    if (!isGridView) {
+        document.getElementById('gridView').classList.add('d-none');
+        document.getElementById('listView').classList.remove('d-none');
+        document.getElementById('viewIcon').className = 'fas fa-list';
+        document.getElementById('viewText').textContent = 'Grid';
+    } else {
+        document.getElementById('gridView').classList.remove('d-none');
+        document.getElementById('listView').classList.add('d-none');
+        document.getElementById('viewIcon').className = 'fas fa-th-large';
+        document.getElementById('viewText').textContent = 'List';
+    }
+    
+    // ✅ Apply saved sort setelah DOM siap (agar tidak reset setelah edit/reload)
+    applySavedSort();
+    
+    // Sorting headers - klik user
+    document.querySelectorAll('#listView .sortable').forEach(header => {
+        header.addEventListener('click', function() {
+            const column = this.dataset.sort;
+            sortTable(column, false); // false = dari klik user, update state
+        });
+    });
+    
+    // Search & Visibility Filter
+    document.getElementById('searchSocial')?.addEventListener('keyup', function(e) {
+        filterSocial(e.target.value.toLowerCase(), document.getElementById('filterVisibility').value);
+    });
+    
+    document.getElementById('filterVisibility')?.addEventListener('change', function(e) {
+        filterSocial(document.getElementById('searchSocial').value.toLowerCase(), e.target.value);
+    });
+    
+    // Auto-update icon preview on custom icon change
+    document.getElementById('icon')?.addEventListener('input', function(e) {
+        const customIcon = e.target.value.trim();
+        const iconPreview = document.getElementById('iconPreview');
+        if (customIcon) {
+            iconPreview.innerHTML = `<i class="${customIcon}"></i>`;
+        } else {
+            iconPreview.innerHTML = '<i class="fas fa-link"></i>';
+        }
+    });
+});
+
+// Reset Form
+function resetForm() {
+    document.getElementById('socialForm').reset();
+    document.getElementById('link_id').value = '';
+    document.getElementById('socialModalLabel').innerHTML = '<i class="fas fa-plus-circle"></i> Tambah Social Media Baru';
+    document.getElementById('iconPreview').innerHTML = '<i class="fas fa-link"></i>';
+    document.getElementById('icon').value = 'fas fa-link';
+    document.getElementById('visible').checked = true;
+    document.getElementById('socialForm').action = "{{ url_for('social.social_add') }}";
+}
+
+// Update Icon Preview
+function updateIconPreview() {
+    const platform = document.getElementById('platform').value;
+    const iconPreview = document.getElementById('iconPreview');
+    const iconInput = document.getElementById('icon');
+    
+    if (platform && platformIcons[platform]) {
+        const iconClass = platformIcons[platform];
+        iconPreview.innerHTML = `<i class="${iconClass}"></i>`;
+        iconInput.value = iconClass;
+    } else {
+        iconPreview.innerHTML = '<i class="fas fa-link"></i>';
+        iconInput.value = 'fas fa-link';
+    }
+}
+
+// Edit Social Media - Load data dan buka modal
+function editSocial(linkId) {
+    fetch(`/admin/api/social/${linkId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const link = data.data;
+                
+                document.getElementById('link_id').value = link._id;
+                document.getElementById('platform').value = link.platform || '';
+                document.getElementById('url').value = link.url || '';
+                document.getElementById('icon').value = link.icon || 'fas fa-link';
+                document.getElementById('visible').checked = link.visible !== false;
+                
+                const iconClass = link.icon || 'fas fa-link';
+                document.getElementById('iconPreview').innerHTML = `<i class="${iconClass}"></i>`;
+                
+                document.getElementById('socialModalLabel').innerHTML = '<i class="fas fa-edit"></i> Edit Social Media';
+                document.getElementById('socialForm').action = `/admin/social/update/${linkId}`;
+                
+                const modal = new bootstrap.Modal(document.getElementById('socialModal'));
+                modal.show();
+            } else {
+                alert('Gagal memuat data social media: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Terjadi kesalahan saat memuat data social media');
+        });
+}
+
+// Confirm Delete
+function confirmDelete(platformName) {
+    return confirm(`Apakah Anda yakin ingin menghapus link ${platformName}?\n\nTindakan ini tidak dapat dibatalkan.`);
+}
+
+// Filter Function
+function filterSocial(searchTerm, visibility) {
+    const cards = document.querySelectorAll('#gridView .col-md-4');
+    const rows = document.querySelectorAll('#listView tbody tr');
+    
+    cards.forEach(card => {
+        const name = card.dataset.name;
+        const url = card.dataset.url;
+        const cardVisible = card.dataset.visible;
+        const matchesSearch = name.includes(searchTerm) || url.includes(searchTerm);
+        const matchesVisibility = visibility === '' || cardVisible === visibility;
+        card.style.display = (matchesSearch && matchesVisibility) ? 'block' : 'none';
+    });
+    
+    rows.forEach(row => {
+        const name = row.dataset.name;
+        const url = row.dataset.url;
+        const matchesSearch = name.includes(searchTerm) || url.includes(searchTerm);
+        const matchesVisibility = visibility === '' || 
+            (visibility === 'visible' && row.dataset.visibility === '1') || 
+            (visibility === 'hidden' && row.dataset.visibility === '0');
+        row.style.display = (matchesSearch && matchesVisibility) ? '' : 'none';
+    });
+}
+</script>
+
+<style>
+.page-title {
+    margin-bottom: 1.5rem;
+}
+
+.social-icon {
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.social-icon:hover {
+    transform: scale(1.05);
+    box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+}
+
+/* Platform colors */
+[data-icon*="facebook"] { background: linear-gradient(135deg, #1877f2 0%, #0d55d9 100%); color: white; }
+[data-icon*="instagram"] { background: linear-gradient(135deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%); color: white; }
+[data-icon*="twitter"] { background: linear-gradient(135deg, #1da1f2 0%, #0d84c4 100%); color: white; }
+[data-icon*="whatsapp"] { background: linear-gradient(135deg, #25d366 0%, #128c7e 100%); color: white; }
+[data-icon*="youtube"] { background: linear-gradient(135deg, #ff0000 0%, #cc0000 100%); color: white; }
+[data-icon*="tiktok"] { background: linear-gradient(135deg, #69c9d0 0%, #000000 100%); color: white; }
+[data-icon*="linkedin"] { background: linear-gradient(135deg, #0a66c2 0%, #074d99 100%); color: white; }
+[data-icon*="github"] { background: linear-gradient(135deg, #333 0%, #1a1a1a 100%); color: white; }
+[data-icon*="link"] { background: linear-gradient(135deg, var(--brown-light), var(--orange-primary)); color: white; }
+
+.col-md-4 {
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.col-md-4:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.table th {
+    font-weight: 600;
+    background-color: #f8f9fa;
+    cursor: pointer;
+    user-select: none;
+}
+
+.sort-icon {
+    margin-left: 5px;
+    font-size: 0.8em;
+    color: #6c757d;
+}
+
+.sortable:hover {
+    background-color: #e9ecef;
+}
+</style>
+{% endblock %}

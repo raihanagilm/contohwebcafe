@@ -1,0 +1,284 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Settings - Management Cafe Admin{% endblock %}
+
+{% block breadcrumb %}
+Settings
+{% endblock %}
+
+{% block content %}
+<div class="page-title">
+    <h1><i class="fas fa-cog"></i> Pengaturan Website</h1>
+    <p>Kelola informasi dasar website cafe Anda</p>
+</div>
+
+<form method="POST" enctype="multipart/form-data" id="settingsForm">
+    <!-- ✅ WAJIB: Hidden input untuk kirim active_tab ke backend -->
+    <input type="hidden" name="active_tab" id="activeTabInput" value="{{ active_tab }}">
+    
+    <!-- TABS NAVIGATION -->
+    <ul class="nav nav-tabs nav-fill mb-4" id="settingsTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link {{ 'active' if active_tab == 'brand' else '' }}" 
+                    id="brand-tab" data-bs-toggle="tab" data-bs-target="#brand" 
+                    type="button" role="tab" aria-controls="brand" aria-selected="{{ 'true' if active_tab == 'brand' else 'false' }}">
+                <i class="fas fa-palette"></i> Brand & Logo
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link {{ 'active' if active_tab == 'contact' else '' }}" 
+                    id="contact-tab" data-bs-toggle="tab" data-bs-target="#contact" 
+                    type="button" role="tab" aria-controls="contact" aria-selected="{{ 'true' if active_tab == 'contact' else 'false' }}">
+                <i class="fas fa-address-book"></i> Kontak
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link {{ 'active' if active_tab == 'location' else '' }}" 
+                    id="location-tab" data-bs-toggle="tab" data-bs-target="#location" 
+                    type="button" role="tab" aria-controls="location" aria-selected="{{ 'true' if active_tab == 'location' else 'false' }}">
+                <i class="fas fa-map-marker-alt"></i> Lokasi & Maps
+            </button>
+        </li>
+    </ul>
+    
+    <div class="tab-content" id="settingsTabsContent">
+        <!-- TAB 1: BRAND & LOGO -->
+        <div class="tab-pane fade {{ 'show active' if active_tab == 'brand' else '' }}" id="brand" role="tabpanel">
+            <div class="card">
+                <div class="card-header"><h5 class="mb-0"><i class="fas fa-palette"></i> Brand & Logo</h5></div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-bold">Logo Cafe</label>
+                            <div class="text-center mb-3">
+                                {% if settings.logo_data %}
+                                <div class="logo-preview-container mb-2">
+                                    <img id="logoPreview" 
+                                         src="data:{{ settings.logo_mime }};base64,{{ settings.logo_data | b64encode }}" 
+                                         alt="Logo Preview" 
+                                         class="img-thumbnail" 
+                                         style="max-width: 200px; max-height: 150px; object-fit: contain;">
+                                </div>
+                                <small class="text-muted">{{ settings.logo_filename }} ({{ (settings.logo_size / 1024) | round(2) }} KB)</small>
+                                {% else %}
+                                <div class="logo-preview-container mb-2">
+                                    <img id="logoPreview" 
+                                         src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='150' viewBox='0 0 200 150'%3E%3Crect fill='%23f8f9fa' width='200' height='150'/%3E%3Ctext fill='%23999' font-family='sans-serif' font-size='14' x='50%25' y='50%25' text-anchor='middle' dy='.3em'%3ENo Logo%3C/text%3E%3C/svg%3E" 
+                                         alt="No Logo" 
+                                         class="img-thumbnail" 
+                                         style="max-width: 200px; max-height: 150px; object-fit: contain;">
+                                </div>
+                                <small class="text-muted">Belum ada logo</small>
+                                {% endif %}
+                            </div>
+                            <input type="file" class="form-control" id="logoInput" name="logo" 
+                                   accept="image/png, image/jpeg, image/jpg, image/webp"
+                                   onchange="previewLogo(this); checkChanges()">
+                            <small class="form-text text-muted"><i class="fas fa-info-circle"></i> Format: PNG, JPG, WEBP (Max 2MB)</small>
+                        </div>
+                        <div class="col-md-8">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="cafe_name" class="form-label fw-bold">Nama Cafe <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="cafe_name" name="cafe_name" 
+                                           value="{{ settings.cafe_name }}" required oninput="checkChanges()">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="tagline" class="form-label fw-bold">Tagline</label>
+                                    <input type="text" class="form-control" id="tagline" name="tagline" 
+                                           value="{{ settings.tagline }}" placeholder="Contoh: Tempat Ngopi Paling Nyaman" oninput="checkChanges()">
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="description" class="form-label fw-bold">Deskripsi Singkat</label>
+                                <textarea class="form-control" id="description" name="description" rows="3" 
+                                          placeholder="Ceritakan tentang cafe Anda secara singkat" oninput="checkChanges()">{{ settings.description }}</textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- TAB 2: KONTAK -->
+        <div class="tab-pane fade {{ 'show active' if active_tab == 'contact' else '' }}" id="contact" role="tabpanel">
+            <div class="card">
+                <div class="card-header"><h5 class="mb-0"><i class="fas fa-address-book"></i> Informasi Kontak</h5></div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="phone" class="form-label fw-bold">Nomor Telepon</label>
+                            <input type="text" class="form-control" id="phone" name="phone" 
+                                   value="{{ settings.phone }}" placeholder="021-1234-5678" oninput="checkChanges()">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="email" class="form-label fw-bold">Email</label>
+                            <input type="email" class="form-control" id="email" name="email" 
+                                   value="{{ settings.email }}" placeholder="info@cafeanda.com" oninput="checkChanges()">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="whatsapp_number" class="form-label fw-bold">WhatsApp Number</label>
+                            <input type="text" class="form-control" id="whatsapp_number" name="whatsapp_number" 
+                                   value="{{ settings.whatsapp_number }}" placeholder="6281234567890" oninput="checkChanges()">
+                            <small class="form-text text-muted">Format: 628xxx (tanpa + atau -)</small>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="address" class="form-label fw-bold">Alamat Lengkap</label>
+                            <textarea class="form-control" id="address" name="address" rows="2" 
+                                      placeholder="Jl. Kebon Jeruk Raya No. 123, Jakarta Barat" oninput="checkChanges()">{{ settings.address }}</textarea>
+                        </div>
+                        <div class="col-12 mb-3">
+                            <label for="opening_hours" class="form-label fw-bold">Jam Operasional</label>
+                            <textarea class="form-control" id="opening_hours" name="opening_hours" rows="2" 
+                                      placeholder="Senin - Jumat: 08:00 - 22:00&#10;Sabtu - Minggu: 09:00 - 23:00" oninput="checkChanges()">{{ settings.opening_hours }}</textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- TAB 3: LOKASI & MAPS (DIPERBAIKI) -->
+        <div class="tab-pane fade {{ 'show active' if active_tab == 'location' else '' }}" id="location" role="tabpanel">
+            <div class="card">
+                <div class="card-header"><h5 class="mb-0"><i class="fas fa-map-marker-alt"></i> Lokasi & Google Maps</h5></div>
+                <div class="card-body">
+                    <div class="alert alert-info mb-3">
+                        <h6 class="alert-heading"><i class="fas fa-lightbulb"></i> Cara Mendapatkan Google Maps</h6>
+                        <ol class="mb-0 small">
+                            <li>Buka <a href="https://www.google.com/maps" target="_blank">Google Maps</a></li>
+                            <li>Cari lokasi cafe Anda</li>
+                            <li>Klik tombol <strong>"Share"</strong> atau <strong>"Bagikan"</strong></li>
+                            <li>Pilih tab <strong>"Embed a map"</strong></li>
+                            <li>Klik <strong>"COPY HTML"</strong> dan paste ke kolom di bawah</li>
+                        </ol>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="google_maps_url" class="form-label fw-bold">Google Maps URL (Share Link)</label>
+                            <input type="url" class="form-control" id="google_maps_url" name="google_maps_url" 
+                                   value="{{ settings.google_maps_url }}" placeholder="https://maps.app.goo.gl/AbCdEf123456" oninput="checkChanges()">
+                            <small class="form-text text-muted">Link untuk dibuka di browser/mobile</small>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="google_maps_iframe" class="form-label fw-bold">Google Maps Embed Code (Iframe)</label>
+                            <textarea class="form-control" id="google_maps_iframe" name="google_maps_iframe" rows="3" 
+                                      placeholder='<iframe src="https://www.google.com/maps/embed?pb=..." width="600" height="450"></iframe>' oninput="checkChanges()">{{ settings.google_maps_iframe }}</textarea>
+                            <small class="form-text text-muted">Kode iframe untuk ditampilkan di website</small>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <label class="form-label fw-bold">Preview Maps</label>
+                        <div class="border rounded p-2 bg-light" style="min-height: 300px;">
+                            {% if settings.google_maps_iframe and settings.google_maps_iframe.strip() != '' %}
+                                <iframe src="{{ settings.google_maps_iframe }}" width="100%" height="300" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+                            {% else %}
+                                <div class="text-center text-muted py-5">
+                                    <i class="fas fa-map-marked-alt fa-3x mb-3"></i>
+                                    <p>Belum ada peta yang ditampilkan</p>
+                                    <small>Silakan isi Google Maps Embed Code atau URL untuk melihat preview</small>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- TOMBOL DI LUAR TABS (TETAP SAMA) -->
+    <div class="card mb-4" id="actionButtonsCard" style="display: none;">
+        <div class="card-body">
+            <div class="d-flex justify-content-end gap-2">
+                <a href="{{ url_for('settings.settings') }}" class="btn btn-secondary px-4">
+                    <i class="fas fa-times"></i> Batal
+                </a>
+                <button type="submit" class="btn btn-primary px-4">
+                    <i class="fas fa-save"></i> Simpan Perubahan
+                </button>
+            </div>
+        </div>
+    </div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// GLOBAL VARIABLES
+let originalValues = {};
+let currentActiveTab = '{{ active_tab }}'; // Ambil dari backend
+
+// INIT ON PAGE LOAD
+document.addEventListener('DOMContentLoaded', () => {
+    // Store original values
+    document.querySelectorAll('#settingsForm input:not([type="file"]), #settingsForm textarea').forEach(input => {
+        if (input.type !== 'hidden') {
+            originalValues[input.name] = input.value;
+        }
+    });
+    
+    // Setup tab switching + update hidden input
+    document.querySelectorAll('#settingsTabs button[data-bs-toggle="tab"]').forEach(tabBtn => {
+        tabBtn.addEventListener('shown.bs.tab', (e) => {
+            // Update current tab & hidden input
+            currentActiveTab = e.target.getAttribute('data-bs-target').substring(1);
+            document.getElementById('activeTabInput').value = currentActiveTab;
+            checkChanges(); // Re-check untuk update tombol
+        });
+    });
+    
+    // Initial check
+    checkChanges();
+});
+
+// DETECT FORM CHANGES
+function checkChanges() {
+    let hasChanges = false;
+    
+    // Check text inputs & textareas
+    document.querySelectorAll('#settingsForm input:not([type="file"]), #settingsForm textarea').forEach(input => {
+        if (input.type !== 'hidden' && input.value !== originalValues[input.name]) {
+            hasChanges = true;
+        }
+    });
+    
+    // Check logo file input
+    const logoInput = document.getElementById('logoInput');
+    if (logoInput?.files?.length > 0) hasChanges = true;
+    
+    // Show/hide action buttons
+    const actionCard = document.getElementById('actionButtonsCard');
+    if (actionCard) actionCard.style.display = hasChanges ? 'block' : 'none';
+}
+
+// PREVIEW LOGO
+function previewLogo(input) {
+    const preview = document.getElementById('logoPreview');
+    if (input.files?.[0]) {
+        const reader = new FileReader();
+        reader.onload = e => {
+            preview.src = e.target.result;
+            preview.style.maxWidth = '200px';
+            preview.style.maxHeight = '150px';
+            preview.style.objectFit = 'contain';
+        };
+        reader.readAsDataURL(input.files[0]);
+        checkChanges();
+    }
+}
+
+// FORM VALIDATION + ENSURE active_tab SUBMITTED
+document.getElementById('settingsForm')?.addEventListener('submit', (e) => {
+    const logoInput = document.getElementById('logoInput');
+    if (logoInput?.files?.[0]) {
+        const fileSize = logoInput.files[0].size / 1024 / 1024;
+        if (fileSize > 2) {
+            e.preventDefault();
+            alert('Ukuran file logo maksimal 2MB!');
+            return false;
+        }
+    }
+    // Pastikan hidden input terisi dengan tab aktif
+    document.getElementById('activeTabInput').value = currentActiveTab;
+});
+</script>
+{% endblock %}

@@ -1,0 +1,640 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Gallery Management - {{ settings.cafe_name }}{% endblock %}
+
+{% block content %}
+<div class="page-title">
+  <h1><i class="fas fa-images"></i> Gallery Management</h1>
+  <p>Kelola foto gallery cafe Anda</p>
+</div>
+
+<!-- Filter dan Tombol Aksi -->
+<div class="card border-0 shadow-sm mb-3">
+  <div class="card-body">
+    <div class="row align-items-center">
+      <div class="col-md-4 mb-2 mb-md-0">
+        <div class="input-group">
+          <span class="input-group-text"><i class="fas fa-search"></i></span>
+          <input type="text" class="form-control" id="searchGallery" placeholder="Cari foto...">
+        </div>
+      </div>
+      <div class="col-md-3 mb-2 mb-md-0">
+        <select class="form-select" id="filterStatus">
+          <option value="">Semua Status</option>
+          <option value="1">Tampilkan</option>
+          <option value="0">Sembunyikan</option>
+        </select>
+      </div>
+      <div class="col-md-5 text-md-end text-center mt-2 mt-md-0">
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#galleryModal" onclick="resetGalleryForm()">
+          <i class="fas fa-plus"></i> Upload Foto Baru
+        </button>
+        <button type="button" class="btn btn-outline-secondary" onclick="toggleGalleryView()">
+          <i class="fas fa-list" id="galleryViewIcon"></i>
+          <span id="galleryViewText">Grid View</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========================================= -->
+<!-- ✅ GRID VIEW - DEFAULT HIDDEN (d-none) -->
+<!-- ========================================= -->
+<div id="galleryGridView" class="row g-3 d-none">
+  {% if gallery and gallery|length > 0 %}
+    {% for item in gallery %}
+    <div class="col-md-4 col-lg-3" 
+         data-name="{{ (item.caption|default('') if item.caption else item.filename)|lower }}"
+         data-status="{{ item.is_valid|default(1) }}">
+      <div class="card h-100 shadow-sm border-0">
+        {% if item.image_data and item.image_mime %}
+        <img src="data:{{ item.image_mime }};base64,{{ item.image_data|b64encode }}"
+             class="card-img-top"
+             alt="{{ item.filename }}"
+             style="height: 180px; object-fit: cover"
+             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
+        <div class="card-img-top bg-light d-flex align-items-center justify-content-center d-none" style="height: 180px">
+          <i class="fas fa-image text-muted" style="font-size: 3rem"></i>
+        </div>
+        {% else %}
+        <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 180px">
+          <i class="fas fa-image text-muted" style="font-size: 3rem"></i>
+        </div>
+        {% endif %}
+        
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-start">
+            <div>
+              <h6 class="card-title mb-1">
+                {% if item.caption %}{{ item.caption|truncate(30) }}{% else %}{{ item.filename|truncate(30) }}{% endif %}
+              </h6>
+              <small class="text-muted">
+                <i class="fas fa-file"></i> {{ item.filename|truncate(25) }}
+              </small>
+            </div>
+            <span class="badge bg-{{ 'success' if item.is_valid|default(1) else 'secondary' }}">
+              {{ 'Tampilkan' if item.is_valid|default(1) else 'Sembunyikan' }}
+            </span>
+          </div>
+          <p class="card-text small text-muted mb-2 mt-2">
+            <i class="fas fa-clock"></i> {{ item.created_at.strftime('%d/%m/%Y %H:%M') if item.created_at else 'N/A' }}
+          </p>
+        </div>
+        
+        <div class="card-footer bg-white border-top">
+          <div class="d-flex justify-content-between">
+            <button class="btn btn-sm btn-outline-primary edit-btn"
+                    data-id="{{ item._id }}"
+                    data-caption="{{ item.caption|default('') }}"
+                    data-is-valid="{{ item.is_valid|default(1) }}"
+                    data-filename="{{ item.filename|default('') }}"
+                    data-created="{{ item.created_at.strftime('%d/%m/%Y %H:%M') if item.created_at else 'N/A' }}">
+              <i class="fas fa-edit"></i> Edit
+            </button>
+            <a href="{{ url_for('gallery.gallery_delete', image_id=item._id) }}"
+               class="btn btn-sm btn-outline-danger delete-btn"
+               data-filename="{{ item.filename }}"
+               onclick="return confirmDeleteGallery('{{ item.filename }}')">
+              <i class="fas fa-trash"></i> Hapus
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  {% else %}
+  <div class="col-12 text-center py-5">
+    <i class="fas fa-images fa-3x text-muted mb-3"></i>
+    <h5 class="text-muted">Belum ada foto gallery</h5>
+    <p class="text-muted">Upload foto pertama Anda untuk menampilkan di website</p>
+    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#galleryModal" onclick="resetGalleryForm()">
+      <i class="fas fa-plus"></i> Upload Foto Sekarang
+    </button>
+  </div>
+  {% endif %}
+</div>
+
+<!-- ========================================= -->
+<!-- ✅ LIST VIEW - DEFAULT VISIBLE (tanpa d-none) -->
+<!-- ========================================= -->
+<div id="galleryListView" class="card border-0 shadow-sm">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0" id="galleryTable">
+        <thead class="table-light">
+          <tr>
+            <th style="width: 50px" class="sortable" data-sort="index">#</th>
+            <th style="width: 100px">Gambar</th>
+            <th class="sortable" data-sort="caption">Caption <i class="fas fa-sort sort-icon"></i></th>
+            <th>Filename</th>
+            <th class="sortable" data-sort="date">Tanggal <i class="fas fa-sort sort-icon"></i></th>
+            <th class="sortable" data-sort="status">Status <i class="fas fa-sort sort-icon"></i></th>
+            <th style="width: 120px">Aksi</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if gallery and gallery|length > 0 %}
+            {% for item in gallery %}
+            <tr data-name="{{ (item.caption|default('') if item.caption else item.filename)|lower }}"
+                data-status="{{ item.is_valid|default(1) }}"
+                data-index="{{ loop.index0 }}"
+                data-date="{{ item.created_at.strftime('%Y%m%d%H%M%S') if item.created_at else '00000000000000' }}">
+              <td class="text-center">{{ loop.index }}</td>
+              <td>
+                {% if item.image_data and item.image_mime %}
+                <img src="data:{{ item.image_mime }};base64,{{ item.image_data|b64encode }}"
+                     alt="{{ item.filename }}"
+                     style="width: 60px; height: 60px; object-fit: cover; border-radius: 4px"
+                     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
+                <div class="bg-light d-flex align-items-center justify-content-center d-none" style="width: 60px; height: 60px; border-radius: 4px">
+                  <i class="fas fa-image text-muted"></i>
+                </div>
+                {% else %}
+                <div class="bg-light d-flex align-items-center justify-content-center" style="width: 60px; height: 60px; border-radius: 4px">
+                  <i class="fas fa-image text-muted"></i>
+                </div>
+                {% endif %}
+              </td>
+              <td>
+                {% if item.caption %}{{ item.caption|truncate(50) }}{% else %}<em class="text-muted">No caption</em>{% endif %}
+              </td>
+              <td>{{ item.filename|truncate(30) }}</td>
+              <td>{{ item.created_at.strftime('%d/%m/%Y %H:%M') if item.created_at else 'N/A' }}</td>
+              <td>
+                <span class="badge bg-{{ 'success' if item.is_valid|default(1) else 'secondary' }}">
+                  {{ 'Tampilkan' if item.is_valid|default(1) else 'Sembunyikan' }}
+                </span>
+              </td>
+              <td>
+                <button class="btn btn-sm btn-primary mb-1 edit-btn"
+                        data-id="{{ item._id }}"
+                        data-caption="{{ item.caption|default('') }}"
+                        data-is-valid="{{ item.is_valid|default(1) }}"
+                        data-filename="{{ item.filename|default('') }}">
+                  <i class="fas fa-edit"></i>
+                </button>
+                <a href="{{ url_for('gallery.gallery_delete', image_id=item._id) }}"
+                   class="btn btn-sm btn-danger delete-btn"
+                   data-filename="{{ item.filename }}"
+                   onclick="return confirmDeleteGallery('{{ item.filename }}')">
+                  <i class="fas fa-trash"></i>
+                </a>
+              </td>
+            </tr>
+            {% endfor %}
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Upload Gallery Modal -->
+<div class="modal fade" id="galleryModal" tabindex="-1" aria-labelledby="galleryModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <form method="POST" action="{{ url_for('gallery.gallery_add') }}" enctype="multipart/form-data" id="galleryForm">
+        <div class="modal-header">
+          <h5 class="modal-title" id="galleryModalLabel">Upload Foto Baru</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row">
+            <div class="col-md-8 mb-3">
+              <label class="form-label">Upload Foto <span class="text-danger">*</span></label>
+              <input type="file" class="form-control" name="image" id="galleryImage" accept="image/*" required>
+              <small class="text-muted">Format: JPG, PNG, WEBP (Max 10MB setelah kompresi)</small>
+              <div id="imagePreview" class="mt-2" style="display: none">
+                <img id="previewImg" src="" alt="Preview" style="max-width: 200px; max-height: 200px; border-radius: 4px">
+              </div>
+            </div>
+            <div class="col-md-4 mb-3">
+              <label class="form-label">Caption</label>
+              <input type="text" class="form-control" name="caption" id="galleryCaption" placeholder="Optional caption">
+            </div>
+            <div class="col-md-12 mb-3">
+              <label class="form-label">Visibility</label>
+              <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" name="is_valid" id="galleryIsValid" value="1" checked>
+                <label class="form-check-label" for="galleryIsValid">
+                  <i class="fas fa-eye"></i> Tampilkan (Tampilkan di website)
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+            <i class="fas fa-times"></i> Batal
+          </button>
+          <button type="submit" class="btn btn-primary">
+            <i class="fas fa-upload"></i> Upload Foto
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Gallery Modal -->
+<div class="modal fade" id="editGalleryModal" tabindex="-1" aria-labelledby="editGalleryModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <form method="POST" action="{{ url_for('gallery.gallery_edit_caption') }}" enctype="multipart/form-data" id="editGalleryForm">
+        <input type="hidden" id="edit_image_id" name="image_id">
+        
+        <div class="modal-header">
+          <h5 class="modal-title" id="editGalleryModalLabel">Edit Foto Gallery</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        
+        <div class="modal-body">
+          <div class="row">
+            <div class="col-md-8 mb-3">
+              <label class="form-label">Foto Saat Ini</label>
+              <div class="text-center bg-light rounded p-3" style="min-height: 180px; display: flex; align-items: center; justify-content: center;">
+                <img id="edit_current_img" src="" alt="Current" class="img-fluid rounded" style="max-height: 180px; max-width: 100%; object-fit: cover; display: none;">
+                <div id="edit_no_image" class="text-muted" style="display: none;">
+                  <i class="fas fa-image fa-3x"></i>
+                  <p class="mb-0 mt-2 small">Tidak ada gambar</p>
+                </div>
+              </div>
+              <p class="text-muted small mt-2 mb-0">
+                <i class="fas fa-file"></i>
+                <span id="edit_filename_display">-</span>
+              </p>
+              
+              <label class="form-label mt-3">Ganti Foto (Opsional)</label>
+              <input type="file" class="form-control" name="image" id="editGalleryImage" accept="image/*">
+              <small class="text-muted">Kosongkan jika tidak ingin mengganti foto</small>
+              
+              <div id="editImagePreview" class="mt-2" style="display: none">
+                <label class="form-label small">Preview Foto Baru:</label>
+                <img id="editPreviewImg" src="" alt="Preview" class="img-fluid rounded" style="max-width: 200px; max-height: 200px">
+              </div>
+            </div>
+            
+            <div class="col-md-4">
+              <div class="mb-3">
+                <label class="form-label">Caption</label>
+                <input type="text" class="form-control" id="edit_caption" name="caption" placeholder="Optional caption">
+              </div>
+              
+              <div class="mb-3">
+                <label class="form-label">Visibility</label>
+                <div class="form-check form-switch">
+                  <input class="form-check-input" type="checkbox" name="is_valid" id="edit_is_valid" value="1">
+                  <label class="form-check-label" for="edit_is_valid">
+                    <i class="fas fa-eye"></i> Tampilkan
+                  </label>
+                </div>
+              </div>
+              
+              <div class="mb-3">
+                <label class="form-label small text-muted">Info</label>
+                <table class="table table-sm table-borderless mb-0 small">
+                  <tr>
+                    <td class="text-muted">Dibuat:</td>
+                    <td id="edit_created_at">-</td>
+                  </tr>
+                  <tr>
+                    <td class="text-muted">Ukuran:</td>
+                    <td id="edit_image_size">-</td>
+                  </tr>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+            <i class="fas fa-times"></i> Batal
+          </button>
+          <button type="submit" class="btn btn-primary">
+            <i class="fas fa-save"></i> Simpan Perubahan
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ========================================= -->
+<!-- ✅ JAVASCRIPT - DOM MANIPULATION + localStorage -->
+<!-- ========================================= -->
+<script>
+// ==================== CONFIG ====================
+const GALLERY_VIEW_KEY = 'cafe_gallery_view';
+const GALLERY_SORT_KEY = 'cafe_gallery_sort';
+
+// ==================== SAFE LOCALSTORAGE ====================
+function getSafeStorage(key, defaultValue) {
+    try {
+        const item = localStorage.getItem(key);
+        return item !== null ? item : defaultValue;
+    } catch { return defaultValue; }
+}
+
+function setSafeStorage(key, value) {
+    try { localStorage.setItem(key, value); } catch {}
+}
+
+// ==================== VIEW TOGGLE (DOM Manipulation) ====================
+function toggleGalleryView() {
+    const gridView = document.getElementById('galleryGridView');
+    const listView = document.getElementById('galleryListView');
+    const icon = document.getElementById('galleryViewIcon');
+    const text = document.getElementById('galleryViewText');
+    
+    if (!gridView || !listView) return;
+    
+    const isGridVisible = !gridView.classList.contains('d-none');
+    const newView = isGridVisible ? 'list' : 'grid';
+    
+    // Toggle class via DOM
+    gridView.classList.toggle('d-none');
+    listView.classList.toggle('d-none');
+    
+    // Save preference to localStorage
+    setSafeStorage(GALLERY_VIEW_KEY, newView);
+    
+    // Update button
+    if (icon) icon.className = newView === 'grid' ? 'fas fa-list' : 'fas fa-th-large';
+    if (text) text.textContent = newView === 'grid' ? 'List View' : 'Grid View';
+}
+
+// ==================== RESTORE PREFERENCE ====================
+function restoreViewPreference() {
+    const saved = getSafeStorage(GALLERY_VIEW_KEY, 'list');
+    
+    if (saved === 'grid') {
+        const gridView = document.getElementById('galleryGridView');
+        const listView = document.getElementById('galleryListView');
+        const icon = document.getElementById('galleryViewIcon');
+        const text = document.getElementById('galleryViewText');
+        
+        if (gridView && listView) {
+            gridView.classList.remove('d-none');
+            listView.classList.add('d-none');
+            if (icon) icon.className = 'fas fa-list';
+            if (text) text.textContent = 'List View';
+        }
+    }
+}
+
+// ==================== SORTING (Persistent via localStorage) ====================
+function getSortState() {
+    try {
+        const saved = getSafeStorage(GALLERY_SORT_KEY, null);
+        return saved ? JSON.parse(saved) : { column: null, direction: 'asc' };
+    } catch { return { column: null, direction: 'asc' }; }
+}
+
+function saveSortState(state) {
+    try { setSafeStorage(GALLERY_SORT_KEY, JSON.stringify(state)); } catch {}
+}
+
+function sortGalleryTable(column) {
+    const tbody = document.querySelector('#galleryTable tbody');
+    if (!tbody) return;
+    
+    let sortState = getSortState();
+    
+    if (sortState.column === column) {
+        sortState.direction = sortState.direction === 'asc' ? 'desc' : 'asc';
+    } else {
+        sortState.column = column;
+        sortState.direction = 'asc';
+    }
+    saveSortState(sortState);
+    
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+    
+    rows.sort((a, b) => {
+        let valA, valB;
+        
+        switch(column) {
+            case 'index':
+                valA = parseInt(a.dataset.index) || 0;
+                valB = parseInt(b.dataset.index) || 0;
+                break;
+            case 'caption':
+                valA = (a.dataset.name || '').toLowerCase();
+                valB = (b.dataset.name || '').toLowerCase();
+                break;
+            case 'date':
+                valA = a.dataset.date || '00000000000000';
+                valB = b.dataset.date || '00000000000000';
+                break;
+            case 'status':
+                valA = parseInt(a.dataset.status) || 0;
+                valB = parseInt(b.dataset.status) || 0;
+                break;
+            default: return 0;
+        }
+        
+        return sortState.direction === 'asc' 
+            ? (valA > valB ? 1 : valA < valB ? -1 : 0)
+            : (valA < valB ? 1 : valA > valB ? -1 : 0);
+    });
+    
+    const fragment = document.createDocumentFragment();
+    rows.forEach(row => fragment.appendChild(row));
+    tbody.innerHTML = '';
+    tbody.appendChild(fragment);
+    
+    rows.forEach((row, idx) => {
+        const cell = row.querySelector('td:first-child');
+        if (cell) cell.textContent = idx + 1;
+    });
+    
+    document.querySelectorAll('#galleryTable .sort-icon').forEach(ic => {
+        ic.className = 'fas fa-sort sort-icon';
+    });
+    const activeIcon = document.querySelector(`#galleryTable .sortable[data-sort="${column}"] .sort-icon`);
+    if (activeIcon) {
+        activeIcon.className = sortState.direction === 'asc' 
+            ? 'fas fa-sort-up sort-icon' 
+            : 'fas fa-sort-down sort-icon';
+    }
+}
+
+// ==================== INIT ====================
+document.addEventListener('DOMContentLoaded', function() {
+    // 1. Restore view preference (DOM manipulation)
+    restoreViewPreference();
+    
+    // 2. Restore sort state
+    const sortState = getSortState();
+    if (sortState.column) {
+        sortGalleryTable(sortState.column);
+    }
+    
+    // 3. Sorting click handlers
+    document.querySelectorAll('#galleryTable .sortable').forEach(header => {
+        header.addEventListener('click', function() {
+            sortGalleryTable(this.dataset.sort);
+        });
+    });
+    
+    // 4. Search & Filter
+    const searchInput = document.getElementById('searchGallery');
+    const statusFilter = document.getElementById('filterStatus');
+    
+    if (searchInput) {
+        searchInput.addEventListener('keyup', (e) => {
+            const term = e.target.value.toLowerCase();
+            const status = statusFilter?.value || '';
+            filterGallery(term, status);
+        });
+    }
+    
+    if (statusFilter) {
+        statusFilter.addEventListener('change', (e) => {
+            const term = searchInput?.value.toLowerCase() || '';
+            filterGallery(term, e.target.value);
+        });
+    }
+    
+    // 5. Image error fallback
+    document.querySelectorAll('img[src^="data:"]').forEach(img => {
+        img.onerror = function() {
+            this.style.display = 'none';
+            const placeholder = this.nextElementSibling;
+            if (placeholder?.classList?.contains('d-none')) {
+                placeholder.classList.remove('d-none');
+            }
+        };
+    });
+    
+    // 6. Edit button handler
+    document.addEventListener('click', function(e) {
+        const editBtn = e.target.closest('.edit-btn');
+        if (editBtn) {
+            e.preventDefault();
+            openEditModal(editBtn);
+        }
+    });
+    
+    // 7. Image preview - Upload
+    const galleryImageInput = document.getElementById('galleryImage');
+    if (galleryImageInput) {
+        galleryImageInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            const preview = document.getElementById('imagePreview');
+            const previewImg = document.getElementById('previewImg');
+            
+            if (file && preview && previewImg) {
+                if (file.size > 10 * 1024 * 1024) {
+                    alert('Ukuran file maksimal 10MB!');
+                    this.value = '';
+                    return;
+                }
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    previewImg.src = event.target.result;
+                    preview.style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            } else if (preview) {
+                preview.style.display = 'none';
+            }
+        });
+    }
+    
+    // 8. Image preview - Edit
+    const editGalleryImageInput = document.getElementById('editGalleryImage');
+    if (editGalleryImageInput) {
+        editGalleryImageInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            const preview = document.getElementById('editImagePreview');
+            const previewImg = document.getElementById('editPreviewImg');
+            
+            if (file && preview && previewImg) {
+                if (file.size > 10 * 1024 * 1024) {
+                    alert('Ukuran file maksimal 10MB!');
+                    this.value = '';
+                    return;
+                }
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    previewImg.src = event.target.result;
+                    preview.style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            } else if (preview) {
+                preview.style.display = 'none';
+            }
+        });
+    }
+});
+
+// ==================== HELPER FUNCTIONS ====================
+function resetGalleryForm() {
+    const form = document.getElementById('galleryForm');
+    if (form) form.reset();
+    const preview = document.getElementById('imagePreview');
+    if (preview) preview.style.display = 'none';
+}
+
+function openEditModal(btn) {
+    const imageId = btn.dataset.id;
+    const caption = btn.dataset.caption || '';
+    const isValid = parseInt(btn.dataset.isValid) || 1;
+    const filename = btn.dataset.filename || '';
+    
+    document.getElementById('edit_image_id').value = imageId;
+    document.getElementById('edit_caption').value = caption;
+    document.getElementById('edit_is_valid').checked = isValid === 1;
+    document.getElementById('edit_filename_display').textContent = filename || 'N/A';
+    
+    const currentImg = document.getElementById('edit_current_img');
+    const noImage = document.getElementById('edit_no_image');
+    const parent = btn.closest('.card') || btn.closest('tr');
+    
+    if (parent) {
+        const existingImg = parent.querySelector('img');
+        if (existingImg && existingImg.src && existingImg.src.startsWith('data:')) {
+            currentImg.src = existingImg.src;
+            currentImg.style.display = 'block';
+            noImage.style.display = 'none';
+        } else {
+            currentImg.style.display = 'none';
+            noImage.style.display = 'block';
+        }
+    }
+    
+    document.getElementById('editImagePreview').style.display = 'none';
+    document.getElementById('editPreviewImg').src = '';
+    document.getElementById('editGalleryImage').value = '';
+    
+    const modal = new bootstrap.Modal(document.getElementById('editGalleryModal'));
+    modal.show();
+}
+
+function confirmDeleteGallery(filename) {
+    return confirm(`Apakah Anda yakin ingin menghapus foto "${filename}"?\n\nTindakan ini tidak dapat dibatalkan.`);
+}
+
+function filterGallery(searchTerm, status) {
+    const cards = document.querySelectorAll('#galleryGridView .col-md-4, #galleryGridView .col-lg-3');
+    const rows = document.querySelectorAll('#galleryTable tbody tr');
+    
+    cards.forEach(card => {
+        const name = card.dataset.name || '';
+        const stat = card.dataset.status;
+        const match = name.includes(searchTerm) && (status === '' || stat === status);
+        card.style.display = match ? 'block' : 'none';
+    });
+    
+    rows.forEach(row => {
+        const name = row.dataset.name || '';
+        const stat = row.dataset.status;
+        const match = name.includes(searchTerm) && (status === '' || stat === status);
+        row.style.display = match ? '' : 'none';
+    });
+}
+</script>
+{% endblock %}

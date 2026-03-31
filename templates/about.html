@@ -1,0 +1,958 @@
+{% extends "base.html" %}
+
+{% block title %}About - {{ settings.cafe_name if settings else 'Cafe' }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* ═══════════════════════════════════════════════════════════
+       ABOUT HERO SECTION (SAMA PERSIS DENGAN MENU.HTML)
+       ═══════════════════════════════════════════════════════════ */
+    .about-hero {
+        padding: 4rem 0 3rem;
+        text-align: center;
+        background: linear-gradient(135deg, var(--cream-warm) 0%, var(--cream) 100%);
+        border-radius: var(--radius-lg);
+        margin-bottom: 3rem;
+    }
+    
+    .about-hero h1 {
+        font-family: var(--font-elegant);
+        font-size: clamp(2rem, 5vw, 3rem);
+        color: var(--brown-dark);
+        margin-bottom: 1rem;
+        font-weight: 700;
+    }
+    
+    .about-hero .lead {
+        font-size: clamp(1rem, 3vw, 1.2rem);
+        color: var(--text-medium);
+        max-width: 600px;
+        margin: 0 auto;
+        line-height: 1.6;
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       ABOUT IMAGE SECTION
+       ═══════════════════════════════════════════════════════════ */
+    .about-image-section {
+        padding: 2rem 0 3rem;
+    }
+    
+    .about-image-wrapper {
+        border-radius: var(--radius-lg);
+        overflow: hidden;
+        box-shadow: var(--shadow-xl);
+        border: 1px solid var(--cream-dark);
+    }
+    
+    .about-image {
+        width: 100%;
+        height: 400px;
+        object-fit: cover;
+        display: block;
+        transition: transform var(--transition-normal);
+    }
+    
+    .about-image-wrapper:hover .about-image {
+        transform: scale(1.05);
+    }
+    
+    .about-image-placeholder {
+        width: 100%;
+        height: 400px;
+        background: var(--cream-dark);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        color: var(--brown-light);
+    }
+    
+    .about-image-placeholder i {
+        font-size: 4rem;
+        margin-bottom: 15px;
+        opacity: 0.5;
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       ABOUT STORY SECTION
+       ═══════════════════════════════════════════════════════════ */
+    .about-story {
+        padding: 4rem 0;
+        background: var(--white);
+    }
+    
+    .story-content {
+        max-width: 800px;
+        margin: 0 auto;
+        text-align: center;
+    }
+    
+    .story-content h2 {
+        font-family: var(--font-elegant);
+        font-size: 2rem;
+        color: var(--brown-dark);
+        margin-bottom: 1.5rem;
+        position: relative;
+        display: inline-block;
+    }
+    
+    .story-content h2::after {
+        content: '';
+        position: absolute;
+        bottom: -10px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 60px;
+        height: 3px;
+        background: var(--orange-primary);
+    }
+    
+    .story-content p {
+        font-size: 1.1rem;
+        line-height: 1.8;
+        color: var(--text-medium);
+        margin-bottom: 2.5rem;
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       ABOUT STATS
+       ═══════════════════════════════════════════════════════════ */
+    .about-stats {
+        display: flex;
+        justify-content: center;
+        gap: 3rem;
+        flex-wrap: wrap;
+    }
+    
+    .stat-item {
+        text-align: center;
+        padding: 1.5rem;
+    }
+    
+    .stat-number {
+        display: block;
+        font-family: var(--font-display);
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: var(--orange-primary);
+        margin-bottom: 0.5rem;
+    }
+    
+    .stat-label {
+        font-size: 0.95rem;
+        color: var(--text-medium);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        font-weight: 600;
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       SECTION HEADER (SAMA DENGAN MENU.HTML)
+       ═══════════════════════════════════════════════════════════ */
+    .section-header {
+        text-align: center;
+        margin-bottom: 3rem;
+    }
+    
+    .section-header h2 {
+        font-family: var(--font-elegant);
+        font-size: 2rem;
+        color: var(--brown-dark);
+        margin-bottom: 0.5rem;
+    }
+    
+    .section-header p {
+        color: var(--text-medium);
+        font-size: 1.1rem;
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       TEAM SECTION - DESKTOP GRID
+       ═══════════════════════════════════════════════════════════ */
+    .our-team {
+        padding: 5rem 0;
+        background: #f8f9fa;
+    }
+    
+    .team-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 1.5rem;
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       TEAM CARD (SAMA DENGAN PROMO CARD DI MENU.HTML)
+       ═══════════════════════════════════════════════════════════ */
+    .team-card {
+        background: var(--white);
+        border-radius: var(--radius-lg);
+        overflow: hidden;
+        box-shadow: var(--shadow-md);
+        transition: all var(--transition-normal);
+        border: 1px solid var(--cream-dark);
+        height: 100%;
+    }
+    
+    .team-card:hover {
+        transform: translateY(-8px);
+        box-shadow: var(--shadow-xl);
+        border-color: var(--orange-light);
+    }
+    
+    .team-image-wrapper {
+        position: relative;
+        width: 100%;
+        height: 280px;
+        overflow: hidden;
+        background: var(--cream-dark);
+    }
+    
+    .team-image {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform var(--transition-normal);
+    }
+    
+    .team-card:hover .team-image {
+        transform: scale(1.1);
+    }
+    
+    .team-image-placeholder {
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(135deg, var(--cream-warm) 0%, var(--cream) 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--brown-light);
+    }
+    
+    .team-image-placeholder i {
+        font-size: 4rem;
+        opacity: 0.5;
+    }
+    
+    .team-social {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: linear-gradient(transparent, rgba(0,0,0,0.8));
+        padding: 1rem;
+        display: flex;
+        gap: 0.5rem;
+        justify-content: center;
+        opacity: 0;
+        transition: opacity var(--transition-normal);
+    }
+    
+    .team-card:hover .team-social {
+        opacity: 1;
+    }
+    
+    .social-link {
+        width: 40px;
+        height: 40px;
+        background: var(--white);
+        border-radius: var(--radius-full);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--brown-dark);
+        transition: all var(--transition-fast);
+        text-decoration: none;
+    }
+    
+    .social-link:hover {
+        background: var(--orange-gradient);
+        color: var(--brown-dark);
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-orange);
+    }
+    
+    .team-info {
+        padding: 1.25rem;
+        text-align: center;
+    }
+    
+    .team-info h3 {
+        font-family: var(--font-display);
+        font-size: 1.2rem;
+        color: var(--brown-dark);
+        margin-bottom: 0.5rem;
+        font-weight: 600;
+    }
+    
+    .team-position {
+        display: block;
+        color: var(--orange-primary);
+        font-weight: 700;
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        margin-bottom: 0.75rem;
+    }
+    
+    .team-description {
+        color: var(--text-light);
+        font-size: 0.95rem;
+        line-height: 1.6;
+        margin: 0;
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       TEAM CAROUSEL - MOBILE (TANPA TOMBOL & DOT)
+       ═══════════════════════════════════════════════════════════ */
+    .team-carousel-wrapper,
+    .values-carousel-wrapper {
+        position: relative;
+        overflow: hidden;
+        padding: 1rem 0 3rem;
+        min-height: 400px;
+    }
+    
+    .team-carousel,
+    .values-carousel {
+        display: flex;
+        gap: 1.5rem;
+        overflow-x: auto;
+        scroll-snap-type: x mandatory;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        padding: 1rem 5%;
+        margin: 0 -5%;
+        scroll-behavior: smooth;
+        cursor: grab;
+    }
+    
+    .team-carousel::-webkit-scrollbar,
+    .values-carousel::-webkit-scrollbar {
+        display: none;
+    }
+    
+    .team-carousel:active,
+    .values-carousel:active {
+        cursor: grabbing;
+    }
+    
+    .team-carousel-item,
+    .value-carousel-item {
+        flex: 0 0 auto;
+        width: clamp(260px, 85vw, 280px);
+        scroll-snap-align: center;
+    }
+    
+    .team-carousel-wrapper.no-scroll .scroll-hint,
+    .values-carousel-wrapper.no-scroll .scroll-hint {
+        display: none !important;
+    }
+    
+    .team-carousel-wrapper.no-scroll .team-carousel,
+    .values-carousel-wrapper.no-scroll .values-carousel {
+        overflow-x: visible;
+        scroll-snap-type: none;
+        -webkit-overflow-scrolling: auto;
+        justify-content: center;
+        padding: 1rem 0;
+        margin: 0;
+    }
+
+    /* Scroll Hint */
+    .scroll-hint {
+        text-align: center;
+        color: var(--text-light);
+        font-size: 0.85rem;
+        margin-top: 1rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        transition: opacity 0.5s ease;
+    }
+    
+    .scroll-hint i {
+        animation: scrollBounce 1.5s infinite;
+        color: var(--orange-primary);
+    }
+    
+    @keyframes scrollBounce {
+        0%, 100% { transform: translateX(0); }
+        50% { transform: translateX(8px); }
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       VALUES SECTION - DESKTOP GRID
+       ═══════════════════════════════════════════════════════════ */
+    .our-values {
+        padding: 5rem 0;
+        background: var(--white);
+    }
+    
+    .values-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       VALUE CARD
+       ═══════════════════════════════════════════════════════════ */
+    .value-card {
+        background: #f8f9fa;
+        border-radius: var(--radius-lg);
+        padding: 2rem 1.5rem;
+        text-align: center;
+        border: 2px solid transparent;
+        transition: all var(--transition-normal);
+        height: 100%;
+    }
+    
+    .value-card:hover {
+        border-color: var(--orange-primary);
+        background: var(--white);
+        box-shadow: var(--shadow-orange);
+        transform: translateY(-5px);
+    }
+    
+    .value-icon {
+        width: 80px;
+        height: 80px;
+        background: var(--orange-gradient);
+        border-radius: var(--radius-full);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1.25rem;
+        box-shadow: var(--shadow-sm);
+    }
+    
+    .value-icon i {
+        font-size: 2rem;
+        color: var(--brown-dark);
+    }
+    
+    .value-card h3 {
+        font-family: var(--font-display);
+        font-size: 1.3rem;
+        color: var(--brown-dark);
+        margin-bottom: 1rem;
+        font-weight: 600;
+    }
+    
+    .value-card p {
+        color: var(--text-medium);
+        line-height: 1.7;
+        margin: 0;
+        font-size: 0.95rem;
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       EMPTY STATE (SAMA DENGAN MENU.HTML)
+       ═══════════════════════════════════════════════════════════ */
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        color: var(--text-light);
+        display: none;
+    }
+    
+    .empty-state.show {
+        display: block;
+        animation: fadeIn 0.5s ease;
+    }
+    
+    .empty-state i {
+        font-size: 4rem;
+        color: var(--cream-dark);
+        opacity: 0.5;
+        margin-bottom: 1.5rem;
+    }
+    
+    .empty-state h3 {
+        font-family: var(--font-display);
+        color: var(--brown-dark);
+        margin-bottom: 0.5rem;
+        font-size: 1.3rem;
+    }
+    
+    .empty-state p {
+        color: var(--text-medium);
+        margin: 0;
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       CTA SECTION (SAMA DENGAN MENU.HTML)
+       ═══════════════════════════════════════════════════════════ */
+    .about-cta {
+        padding: 4rem 2rem;
+        background: var(--orange-gradient);
+        border-radius: var(--radius-xl);
+        text-align: center;
+        margin: 3rem 0;
+        box-shadow: var(--shadow-orange);
+    }
+    
+    .about-cta h2 {
+        font-family: var(--font-elegant);
+        color: var(--brown-dark);
+        margin-bottom: 1rem;
+        font-size: 2rem;
+    }
+    
+    .about-cta p {
+        color: var(--brown);
+        margin-bottom: 2rem;
+        font-size: 1.1rem;
+    }
+    
+    .cta-buttons {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 1rem;
+    }
+    
+    .btn {
+        padding: 1rem 2.5rem;
+        border-radius: var(--radius-full);
+        text-decoration: none;
+        font-weight: 700;
+        transition: all var(--transition-normal);
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 1rem;
+        border: none;
+        cursor: pointer;
+    }
+    
+    .btn-primary {
+        background: var(--brown-dark);
+        color: var(--white);
+        box-shadow: var(--shadow-md);
+    }
+    
+    .btn-primary:hover {
+        background: var(--brown);
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-lg);
+        color: var(--white);
+    }
+    
+    .btn-secondary {
+        background: var(--white);
+        color: var(--brown-dark);
+        border: 2px solid var(--brown-dark);
+    }
+    
+    .btn-secondary:hover {
+        background: var(--brown-dark);
+        color: var(--white);
+        transform: translateY(-4px);
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       RESPONSIVE (SAMA PERSIS DENGAN MENU.HTML)
+       ═══════════════════════════════════════════════════════════ */
+    @media (max-width: 768px) {
+        .about-hero {
+            padding: 3rem 0 2rem;
+        }
+        
+        .about-hero h1 {
+            font-size: 1.8rem;
+        }
+        
+        .about-hero .lead {
+            font-size: 1rem;
+        }
+        
+        .about-image {
+            height: 250px;
+        }
+        
+        .about-image-placeholder {
+            height: 250px;
+        }
+        
+        .about-story,
+        .our-team,
+        .our-values,
+        .about-cta {
+            padding: 3rem 0;
+        }
+        
+        .story-content h2,
+        .section-header h2,
+        .about-cta h2 {
+            font-size: 1.5rem;
+        }
+        
+        .about-stats {
+            gap: 1.5rem;
+        }
+        
+        .stat-number {
+            font-size: 2rem;
+        }
+        
+        /* Hide desktop view on mobile */
+        .desktop-view {
+            display: none !important;
+        }
+        
+        /* Show mobile carousel on mobile */
+        .mobile-view {
+            display: block !important;
+        }
+        
+        .cta-buttons {
+            flex-direction: column;
+            align-items: stretch;
+        }
+        
+        .btn {
+            justify-content: center;
+        }
+    }
+    
+    @media (min-width: 769px) {
+        /* Hide mobile carousel on desktop */
+        .mobile-view {
+            display: none !important;
+        }
+        
+        .scroll-hint {
+            display: none !important;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- ═══════════════════════════════════════════════════════════
+     ABOUT HERO SECTION
+     ═══════════════════════════════════════════════════════════ -->
+<section class="about-hero">
+    <div class="container">
+        <h1>📖 Tentang Kami</h1>
+        <p class="lead">Mengenal lebih dekat {{ settings.cafe_name if settings else 'Cafe' }} dan cerita di balik setiap cangkir kopi</p>
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════
+     ABOUT IMAGE SECTION
+     ═══════════════════════════════════════════════════════════ -->
+<section class="about-image-section">
+    <div class="container">
+        <div class="about-image-wrapper">
+            {% if about.about_image_data %}
+            <img src="{{ url_for('main.serve_about_image') }}" alt="About {{ settings.cafe_name }}" class="about-image">
+            {% else %}
+            <div class="about-image-placeholder">
+                <i class="fas fa-image"></i>
+                <span>Image Coming Soon</span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════
+     ABOUT STORY SECTION
+     ═══════════════════════════════════════════════════════════ -->
+<section class="about-story">
+    <div class="container">
+        <div class="story-content">
+            <h2>Cerita Kami</h2>
+            <p>{{ about.about_story if about.about_story else 'Selamat datang di cafe kami! Kami berdedikasi untuk memberikan pengalaman kopi terbaik dalam suasana yang nyaman.' }}</p>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════
+     OUR TEAM SECTION
+     ═══════════════════════════════════════════════════════════ -->
+<section class="our-team" id="team">
+    <div class="container">
+        <div class="section-header">
+            <h2>Tim Kami</h2>
+            <p>Orang-orang hebat di balik {{ settings.cafe_name }}</p>
+        </div>
+        
+        {% if about.our_team and about.our_team|length > 0 %}
+        <!-- Desktop Grid View -->
+        <div class="team-grid desktop-view">
+            {% for member in about.our_team %}
+            <div class="team-card">
+                <div class="team-image-wrapper">
+                    {% if member.image_data %}
+                    <img src="{{ url_for('main.serve_team_image', member_index=loop.index0) }}" alt="{{ member.name }}" class="team-image">
+                    {% else %}
+                    <div class="team-image-placeholder">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Social Links Overlay -->
+                    {% if social %}
+                    <div class="team-social">
+                        {% for link in social %}
+                        {% if link.visible|default(true) %}
+                        <a href="{{ link.url }}" target="_blank" class="social-link">
+                            <i class="fab {{ link.icon|default('fa-link') }}"></i>
+                        </a>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="team-info">
+                    <h3>{{ member.name }}</h3>
+                    <span class="team-position">{{ member.position }}</span>
+                    <p class="team-description">{{ member.description|truncate(100) }}</p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        
+        <!-- Mobile Horizontal Carousel (TANPA TOMBOL & DOT) -->
+        <div class="team-carousel-wrapper mobile-view" id="teamCarouselWrapper">
+            <div class="team-carousel" id="teamCarousel">
+                {% for member in about.our_team %}
+                <div class="team-carousel-item">
+                    <div class="team-card">
+                        <div class="team-image-wrapper">
+                            {% if member.image_data %}
+                            <img src="{{ url_for('main.serve_team_image', member_index=loop.index0) }}" alt="{{ member.name }}" class="team-image">
+                            {% else %}
+                            <div class="team-image-placeholder">
+                                <i class="fas fa-user"></i>
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="team-info">
+                            <h3>{{ member.name }}</h3>
+                            <span class="team-position">{{ member.position }}</span>
+                            <p class="team-description">{{ member.description|truncate(80) }}</p>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <!-- Scroll Hint (Mobile Only) -->
+            <div class="scroll-hint" id="teamScrollHint">
+                <i class="fas fa-arrow-right"></i>
+                <span>Swipe untuk melihat tim lainnya</span>
+                <i class="fas fa-arrow-right"></i>
+            </div>
+        </div>
+        {% else %}
+        <div class="empty-state show">
+            <i class="fas fa-users"></i>
+            <h3>Tim Belum Ditambahkan</h3>
+            <p>Admin belum menambahkan anggota tim</p>
+        </div>
+        {% endif %}
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════
+     OUR VALUES SECTION
+     ═══════════════════════════════════════════════════════════ -->
+<section class="our-values" id="values">
+    <div class="container">
+        <div class="section-header">
+            <h2>Nilai-Nilai Kami</h2>
+            <p>Prinsip yang kami pegang teguh</p>
+        </div>
+        
+        {% if about.our_values and about.our_values|length > 0 %}
+        <!-- Desktop Grid View -->
+        <div class="values-grid desktop-view">
+            {% for value in about.our_values %}
+            <div class="value-card">
+                <div class="value-icon">
+                    <i class="fas {{ value.icon }}"></i>
+                </div>
+                <h3>{{ value.title }}</h3>
+                <p>{{ value.description }}</p>
+            </div>
+            {% endfor %}
+        </div>
+        
+        <!-- Mobile Horizontal Carousel (TANPA TOMBOL & DOT) -->
+        <div class="values-carousel-wrapper mobile-view" id="valuesCarouselWrapper">
+            <div class="values-carousel" id="valuesCarousel">
+                {% for value in about.our_values %}
+                <div class="value-carousel-item">
+                    <div class="value-card">
+                        <div class="value-icon">
+                            <i class="fas {{ value.icon }}"></i>
+                        </div>
+                        <h3>{{ value.title }}</h3>
+                        <p>{{ value.description }}</p>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <!-- Scroll Hint (Mobile Only) -->
+            <div class="scroll-hint" id="valuesScrollHint">
+                <i class="fas fa-arrow-right"></i>
+                <span>Swipe untuk melihat nilai lainnya</span>
+                <i class="fas fa-arrow-right"></i>
+            </div>
+        </div>
+        {% else %}
+        <div class="empty-state show">
+            <i class="fas fa-star"></i>
+            <h3>Nilai Belum Ditambahkan</h3>
+            <p>Admin belum menambahkan nilai-nilai cafe</p>
+        </div>
+        {% endif %}
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════
+     CTA SECTION
+     ═══════════════════════════════════════════════════════════ -->
+<section class="about-cta">
+    <div class="container">
+        <h2>Ingin Mengunjungi Kami?</h2>
+        <p>Rasakan pengalaman kopi terbaik di {{ settings.cafe_name }}</p>
+        <div class="cta-buttons">
+            <a href="{{ url_for('main.menu_page') }}" class="btn btn-primary">
+                <i class="fas fa-utensils"></i> Lihat Menu
+            </a>
+            <a href="{{ url_for('main.contact_page') }}" class="btn btn-secondary">
+                <i class="fas fa-map-marker-alt"></i> Lokasi Kami
+            </a>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize all carousels (Team & Values) - TANPA TOMBOL & DOT
+    const carouselConfigs = [
+        {
+            wrapperId: 'teamCarouselWrapper',
+            carouselId: 'teamCarousel',
+            hintId: 'teamScrollHint',
+            itemSelector: '.team-carousel-item'
+        },
+        {
+            wrapperId: 'valuesCarouselWrapper',
+            carouselId: 'valuesCarousel',
+            hintId: 'valuesScrollHint',
+            itemSelector: '.value-carousel-item'
+        }
+    ];
+    
+    carouselConfigs.forEach(config => {
+        const wrapper = document.getElementById(config.wrapperId);
+        const carousel = document.getElementById(config.carouselId);
+        const scrollHint = document.getElementById(config.hintId);
+        
+        if (!carousel || !wrapper) return;
+        
+        const items = carousel.querySelectorAll(config.itemSelector);
+        const gap = 24;
+        
+        // Check if carousel needs scroll
+        function checkCarouselScroll() {
+            if (window.innerWidth > 768) return;
+            
+            setTimeout(function() {
+                const visibleItems = Array.from(carousel.querySelectorAll(`${config.itemSelector}:not([style*="display: none"])`));
+                
+                if (visibleItems.length === 0) {
+                    wrapper.classList.add('no-scroll');
+                    return;
+                }
+                
+                let totalContentWidth = 0;
+                visibleItems.forEach(function(item) {
+                    totalContentWidth += item.offsetWidth;
+                });
+                
+                if (visibleItems.length > 1) {
+                    totalContentWidth += gap * (visibleItems.length - 1);
+                }
+                
+                const containerWidth = carousel.clientWidth;
+                const canScroll = totalContentWidth > (containerWidth + 10);
+                
+                if (canScroll) {
+                    wrapper.classList.remove('no-scroll');
+                } else {
+                    wrapper.classList.add('no-scroll');
+                }
+            }, 200);
+        }
+        
+        // Auto-hide scroll hint after first scroll
+        if (carousel && scrollHint) {
+            let hasScrolled = false;
+            carousel.addEventListener('scroll', function() {
+                if (!hasScrolled && carousel.scrollLeft > 50) {
+                    hasScrolled = true;
+                    scrollHint.style.opacity = '0';
+                    scrollHint.style.transition = 'opacity 0.5s ease';
+                    setTimeout(function() { 
+                        scrollHint.style.display = 'none'; 
+                    }, 500);
+                }
+            });
+        }
+        
+        // Touch/swipe support
+        let isDown = false, startX, scrollLeft;
+        
+        carousel.addEventListener('mousedown', (e) => {
+            isDown = true;
+            carousel.style.cursor = 'grabbing';
+            startX = e.pageX - carousel.offsetLeft;
+            scrollLeft = carousel.scrollLeft;
+        });
+        
+        carousel.addEventListener('mouseleave', () => { 
+            isDown = false; 
+            carousel.style.cursor = 'grab'; 
+        });
+        
+        carousel.addEventListener('mouseup', () => { 
+            isDown = false; 
+            carousel.style.cursor = 'grab'; 
+        });
+        
+        carousel.addEventListener('mousemove', (e) => {
+            if (!isDown) return;
+            e.preventDefault();
+            const x = e.pageX - carousel.offsetLeft;
+            const walk = (x - startX) * 2;
+            carousel.scrollLeft = scrollLeft - walk;
+        });
+        
+        // Initialize
+        setTimeout(checkCarouselScroll, 100);
+        setTimeout(checkCarouselScroll, 500);
+        
+        window.addEventListener('resize', () => {
+            checkCarouselScroll();
+        });
+    });
+});
+</script>
+{% endblock %}

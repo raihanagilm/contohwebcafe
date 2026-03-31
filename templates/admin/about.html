@@ -1,0 +1,859 @@
+{% extends "admin/base.html" %}
+{% block title %}About Page Management - Management Cafe Admin{% endblock %}
+{% block content %}
+<div class="page-title">
+<h1><i class="fas fa-info-circle"></i> Manajemen Halaman About</h1>
+<p>Kelola konten halaman About (Story, Team, Values)</p>
+</div>
+<!-- Tab Navigation -->
+<ul class="nav nav-tabs nav-fill mb-4" id="aboutTabs" role="tablist">
+<li class="nav-item" role="presentation">
+<button class="nav-link active" id="story-tab" data-bs-toggle="tab" data-bs-target="#story" type="button" role="tab" aria-controls="story" aria-selected="true">
+<i class="fas fa-book"></i> About Story
+</button>
+</li>
+<li class="nav-item" role="presentation">
+<button class="nav-link" id="team-tab" data-bs-toggle="tab" data-bs-target="#team" type="button" role="tab" aria-controls="team" aria-selected="false">
+<i class="fas fa-users"></i> Our Team
+<span class="badge bg-secondary ms-2">{{ settings.our_team|length if settings.our_team else 0 }}</span>
+</button>
+</li>
+<li class="nav-item" role="presentation">
+<button class="nav-link" id="values-tab" data-bs-toggle="tab" data-bs-target="#values" type="button" role="tab" aria-controls="values" aria-selected="false">
+<i class="fas fa-star"></i> Our Values
+<span class="badge bg-secondary ms-2">{{ settings.our_values|length if settings.our_values else 0 }}</span>
+</button>
+</li>
+</ul>
+<!-- Tab Content -->
+<div class="tab-content" id="aboutTabsContent">
+<!-- ========== STORY TAB ========== -->
+<div class="tab-pane fade show active" id="story" role="tabpanel" aria-labelledby="story-tab">
+<div class="card border-0 shadow-sm">
+<div class="card-body">
+<h5 class="card-title mb-4">
+<i class="fas fa-book-open"></i> About Story
+</h5>
+<form method="POST" action="{{ url_for('about.about_settings') }}" enctype="multipart/form-data">
+<div class="mb-3">
+<label class="form-label">Cerita Cafe Anda</label>
+<textarea class="form-control" name="about_story" rows="8" placeholder="Tuliskan cerita tentang cafe Anda...">{{ settings.about_story if settings.about_story else '' }}</textarea>
+<small class="text-muted">Ceritakan tentang cafe Anda, misi, dan apa yang membuat cafe Anda spesial.</small>
+</div>
+<div class="mb-3">
+<label class="form-label">Upload Gambar Story</label>
+<input type="file" class="form-control" name="about_image" id="about_image" accept="image/*">
+<small class="text-muted">Format: JPG, PNG, WEBP (Max 2MB)</small>
+<div id="aboutImagePreview" class="mt-3" style="display: none;">
+<label class="form-label">Preview Gambar:</label>
+<div style="max-width: 300px; border: 2px dashed #dee2e6; border-radius: 8px; padding: 10px; background-color: #f8f9fa;">
+<img id="aboutPreviewImg" src="" alt="Preview" class="img-fluid rounded">
+</div>
+</div>
+{% if settings.about_image_data %}
+<div class="mt-3">
+<label class="form-label">Gambar Saat Ini:</label>
+<div style="max-width: 300px; max-height: 300px; border: 1px solid #dee2e6; border-radius: 8px; padding: 10px; background-color: #f8f9fa; overflow: hidden;">
+<img src="data:{{ settings.about_image_mime }};base64,{{ settings.about_image_data|b64encode }}"
+alt="About Story Image"
+class="img-fluid rounded"
+style="max-width: 100%; max-height: 280px; object-fit: contain;">
+</div>
+</div>
+{% endif %}
+</div>
+<div class="text-end">
+<button type="submit" class="btn btn-primary">
+<i class="fas fa-save"></i> Simpan Story
+</button>
+</div>
+</form>
+</div>
+</div>
+</div>
+<!-- ========== TEAM TAB ========== -->
+<div class="tab-pane fade" id="team" role="tabpanel" aria-labelledby="team-tab">
+<div class="card border-0 shadow-sm mb-3">
+<div class="card-body">
+<div class="row align-items-center">
+<div class="col-md-4 mb-2 mb-md-0">
+<div class="input-group">
+<span class="input-group-text"><i class="fas fa-search"></i></span>
+<input type="text" class="form-control" id="searchTeam" placeholder="Cari team member...">
+</div>
+</div>
+<div class="col-md-8 text-md-end text-center mt-2 mt-md-0">
+<button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#teamModal" onclick="resetTeamForm()">
+<i class="fas fa-plus"></i> Tambah Team Member
+</button>
+<button type="button" class="btn btn-outline-secondary" onclick="toggleTeamView()">
+<i class="fas fa-list" id="teamViewIcon"></i> <span id="teamViewText">Grid View</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Team Grid View -->
+<div id="teamGridView" class="row g-3 d-none">
+{% if settings.our_team and settings.our_team|length > 0 %}
+{% for member in settings.our_team %}
+<div class="col-md-4" data-name="{{ member.name|lower }}" data-position="{{ member.position|lower }}">
+<div class="card h-100 shadow-sm border-0">
+{% if member.image_data %}
+<img src="data:{{ member.image_mime }};base64,{{ member.image_data|b64encode }}"
+class="card-img-top"
+alt="{{ member.name }}"
+style="height: 200px; object-fit: cover;">
+{% else %}
+<div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 200px;">
+<i class="fas fa-user-circle text-muted" style="font-size: 4rem;"></i>
+</div>
+{% endif %}
+<div class="card-body">
+<h6 class="card-title mb-1">{{ member.name }}</h6>
+<p class="card-text text-muted small mb-2">{{ member.position }}</p>
+<p class="card-text small">{{ member.description|truncate(80) }}</p>
+</div>
+<div class="card-footer bg-white border-top">
+<div class="d-flex justify-content-between">
+<button class="btn btn-sm btn-primary edit-team-btn"
+data-index="{{ loop.index0 }}"
+data-member-name="{{ member.name }}"
+data-member-position="{{ member.position }}"
+data-member-description="{{ member.description }}">
+<i class="fas fa-edit"></i> Edit
+</button>
+<form method="POST" action="{{ url_for('about.about_settings') }}" style="display: inline;" onsubmit="return confirmDeleteTeam('{{ member.name }}')">
+<input type="hidden" name="delete_team_index" value="{{ loop.index0 }}">
+<button type="submit" class="btn btn-sm btn-danger">
+<i class="fas fa-trash"></i> Hapus
+</button>
+</form>
+</div>
+</div>
+</div>
+</div>
+{% endfor %}
+{% else %}
+<div class="col-12 text-center py-5">
+<i class="fas fa-users fa-3x text-muted mb-3"></i>
+<h5 class="text-muted">Belum ada team member</h5>
+<p class="text-muted">Klik tombol "Tambah Team Member" untuk menambahkan anggota tim pertama Anda</p>
+<button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#teamModal" onclick="resetTeamForm()">
+<i class="fas fa-plus"></i> Tambah Team Member Sekarang
+</button>
+</div>
+{% endif %}
+</div>
+<!-- Team List View -->
+<div id="teamListView" class="card border-0 shadow-sm">
+<div class="card-body p-0">
+<div class="table-responsive">
+<table class="table table-hover mb-0" id="teamTable">
+<thead class="table-light">
+<tr>
+<th style="width: 50px; cursor: pointer;" class="sortable" data-sort="index" title="Klik untuk sortir">#</th>
+<th style="width: 80px;">Foto</th>
+<th style="cursor: pointer;" class="sortable" data-sort="name" title="Klik untuk sortir">Nama <i class="fas fa-sort sort-icon"></i></th>
+<th style="cursor: pointer;" class="sortable" data-sort="position" title="Klik untuk sortir">Posisi <i class="fas fa-sort sort-icon"></i></th>
+<th>Deskripsi</th>
+<th style="width: 120px;">Aksi</th>
+</tr>
+</thead>
+<tbody>
+{% if settings.our_team and settings.our_team|length > 0 %}
+{% for member in settings.our_team %}
+<tr data-name="{{ member.name|lower }}" data-position="{{ member.position|lower }}" data-name-sort="{{ member.name|lower }}" data-index="{{ loop.index0 }}">
+<td class="text-center align-middle">{{ loop.index }}</td>
+<td class="align-middle">
+{% if member.image_data %}
+<img src="data:{{ member.image_mime }};base64,{{ member.image_data|b64encode }}"
+alt="{{ member.name }}"
+class="img-thumbnail"
+style="width: 60px; height: 60px; object-fit: cover; border-radius: 50%;">
+{% else %}
+<div class="bg-light d-flex align-items-center justify-content-center"
+style="width: 60px; height: 60px; border-radius: 50%; border: 1px solid #dee2e6;">
+<i class="fas fa-user text-muted" style="font-size: 1.5rem;"></i>
+</div>
+{% endif %}
+</td>
+<td class="align-middle"><strong>{{ member.name }}</strong></td>
+<td class="align-middle">{{ member.position }}</td>
+<td class="align-middle">{{ member.description|truncate(60) }}</td>
+<td class="align-middle">
+<button class="btn btn-sm btn-primary mb-1 edit-team-btn"
+data-index="{{ loop.index0 }}"
+data-member-name="{{ member.name }}"
+data-member-position="{{ member.position }}"
+data-member-description="{{ member.description }}">
+<i class="fas fa-edit"></i>
+</button>
+<form method="POST" action="{{ url_for('about.about_settings') }}" style="display: inline;" onsubmit="return confirmDeleteTeam('{{ member.name }}')">
+<input type="hidden" name="delete_team_index" value="{{ loop.index0 }}">
+<button type="submit" class="btn btn-sm btn-danger">
+<i class="fas fa-trash"></i>
+</button>
+</form>
+</td>
+</tr>
+{% endfor %}
+{% endif %}
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+<!-- ========== VALUES TAB ========== -->
+<div class="tab-pane fade" id="values" role="tabpanel" aria-labelledby="values-tab">
+<div class="card border-0 shadow-sm mb-3">
+<div class="card-body">
+<div class="row align-items-center">
+<div class="col-md-4 mb-2 mb-md-0">
+<div class="input-group">
+<span class="input-group-text"><i class="fas fa-search"></i></span>
+<input type="text" class="form-control" id="searchValues" placeholder="Cari value...">
+</div>
+</div>
+<div class="col-md-8 text-md-end text-center mt-2 mt-md-0">
+<button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#valueModal" onclick="resetValueForm()">
+<i class="fas fa-plus"></i> Tambah Value
+</button>
+<button type="button" class="btn btn-outline-secondary" onclick="toggleValuesView()">
+<i class="fas fa-list" id="valuesViewIcon"></i> <span id="valuesViewText">Grid View</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Values Grid View -->
+<div id="valuesGridView" class="row g-3 d-none">
+{% if settings.our_values and settings.our_values|length > 0 %}
+{% for value in settings.our_values %}
+<div class="col-md-4" data-title="{{ value.title|lower }}" data-icon="{{ value.icon }}">
+<div class="card h-100 shadow-sm border-0">
+<div class="card-body text-center">
+<div class="mb-3">
+<i class="fa {{ value.icon }} fa-3x text-primary"></i>
+</div>
+<h6 class="card-title mb-2">{{ value.title }}</h6>
+<p class="card-text text-muted">{{ value.description|truncate(100) }}</p>
+</div>
+<div class="card-footer bg-white border-top">
+<div class="d-flex justify-content-between">
+<button class="btn btn-sm btn-primary edit-value-btn"
+data-index="{{ loop.index0 }}"
+data-value-icon="{{ value.icon }}"
+data-value-title="{{ value.title }}"
+data-value-description="{{ value.description }}">
+<i class="fas fa-edit"></i> Edit
+</button>
+<form method="POST" action="{{ url_for('about.about_settings') }}" style="display: inline;" onsubmit="return confirmDeleteValue('{{ value.title }}')">
+<input type="hidden" name="delete_value_index" value="{{ loop.index0 }}">
+<button type="submit" class="btn btn-sm btn-danger">
+<i class="fas fa-trash"></i> Hapus
+</button>
+</form>
+</div>
+</div>
+</div>
+</div>
+{% endfor %}
+{% else %}
+<div class="col-12 text-center py-5">
+<i class="fas fa-star fa-3x text-muted mb-3"></i>
+<h5 class="text-muted">Belum ada values</h5>
+<p class="text-muted">Klik tombol "Tambah Value" untuk menambahkan nilai-nilai cafe Anda</p>
+<button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#valueModal" onclick="resetValueForm()">
+<i class="fas fa-plus"></i> Tambah Value Sekarang
+</button>
+</div>
+{% endif %}
+</div>
+<!-- Values List View -->
+<div id="valuesListView" class="card border-0 shadow-sm">
+<div class="card-body p-0">
+<div class="table-responsive">
+<table class="table table-hover mb-0" id="valuesTable">
+<thead class="table-light">
+<tr>
+<th style="width: 50px; cursor: pointer;" class="sortable" data-sort="index" title="Klik untuk sortir">#</th>
+<th style="width: 60px;">Icon</th>
+<th style="cursor: pointer;" class="sortable" data-sort="title" title="Klik untuk sortir">Judul <i class="fas fa-sort sort-icon"></i></th>
+<th>Deskripsi</th>
+<th style="width: 120px;">Aksi</th>
+</tr>
+</thead>
+<tbody>
+{% if settings.our_values and settings.our_values|length > 0 %}
+{% for value in settings.our_values %}
+<tr data-title="{{ value.title|lower }}" data-icon="{{ value.icon }}" data-title-sort="{{ value.title|lower }}" data-index="{{ loop.index0 }}">
+<td class="text-center align-middle">{{ loop.index }}</td>
+<td class="text-center align-middle">
+<i class="fa {{ value.icon }} fa-2x text-primary"></i>
+</td>
+<td class="align-middle"><strong>{{ value.title }}</strong></td>
+<td class="align-middle">{{ value.description|truncate(80) }}</td>
+<td class="align-middle">
+<button class="btn btn-sm btn-primary mb-1 edit-value-btn"
+data-index="{{ loop.index0 }}"
+data-value-icon="{{ value.icon }}"
+data-value-title="{{ value.title }}"
+data-value-description="{{ value.description }}">
+<i class="fas fa-edit"></i>
+</button>
+<form method="POST" action="{{ url_for('about.about_settings') }}" style="display: inline;" onsubmit="return confirmDeleteValue('{{ value.title }}')">
+<input type="hidden" name="delete_value_index" value="{{ loop.index0 }}">
+<button type="submit" class="btn btn-sm btn-danger">
+<i class="fas fa-trash"></i>
+</button>
+</form>
+</td>
+</tr>
+{% endfor %}
+{% endif %}
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- ========== TEAM MEMBER MODAL ========== -->
+<div class="modal fade" id="teamModal" tabindex="-1" aria-labelledby="teamModalLabel" aria-hidden="true">
+<div class="modal-dialog modal-lg">
+<div class="modal-content">
+<form method="POST" action="{{ url_for('about.about_settings') }}" enctype="multipart/form-data">
+<input type="hidden" name="team_index" id="team_index">
+<div class="modal-header">
+<h5 class="modal-title" id="teamModalLabel">Tambah Team Member</h5>
+<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+</div>
+<div class="modal-body">
+<div class="row">
+<div class="col-md-6 mb-3">
+<label class="form-label">Nama <span class="text-danger">*</span></label>
+<input type="text" class="form-control" name="team_name" id="team_name" required>
+</div>
+<div class="col-md-6 mb-3">
+<label class="form-label">Posisi <span class="text-danger">*</span></label>
+<input type="text" class="form-control" name="team_position" id="team_position" required>
+</div>
+<div class="col-12 mb-3">
+<label class="form-label">Deskripsi <span class="text-danger">*</span></label>
+<textarea class="form-control" name="team_description" id="team_description" rows="3" required></textarea>
+</div>
+<div class="col-12 mb-3">
+<label class="form-label">Upload Foto</label>
+<input type="file" class="form-control" name="team_image" id="team_image" accept="image/*">
+<small class="text-muted">Format: JPG, PNG, WEBP (Max 2MB)</small>
+<div id="teamImagePreview" class="mt-2" style="display: none;">
+<label class="form-label">Preview Foto:</label>
+<div style="max-width: 200px; border: 2px dashed #dee2e6; border-radius: 50%; padding: 5px; background-color: #f8f9fa;">
+<img id="teamPreviewImg" src="" alt="Preview" style="max-width: 100%; border-radius: 50%;">
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="modal-footer">
+<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+<i class="fas fa-times"></i> Batal
+</button>
+<button type="submit" class="btn btn-primary">
+<i class="fas fa-save"></i> Simpan
+</button>
+</div>
+</form>
+</div>
+</div>
+</div>
+<!-- ========== VALUE MODAL ========== -->
+<div class="modal fade" id="valueModal" tabindex="-1" aria-labelledby="valueModalLabel" aria-hidden="true">
+<div class="modal-dialog">
+<div class="modal-content">
+<form method="POST" action="{{ url_for('about.about_settings') }}">
+<input type="hidden" name="value_index" id="value_index">
+<div class="modal-header">
+<h5 class="modal-title" id="valueModalLabel">Tambah Value</h5>
+<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+</div>
+<div class="modal-body">
+<div class="mb-3">
+<label class="form-label">Icon <span class="text-danger">*</span></label>
+<div class="input-group">
+<select class="form-select" id="value_icon_select" onchange="updateIconInput()">
+<option value="">-- Pilih Icon atau Ketik Manual --</option>
+<option value="fa-seedling">🌱 Seedling (Sustainability)</option>
+<option value="fa-heart">❤️ Heart (Community)</option>
+<option value="fa-mug-hot">☕ Mug Hot (Quality)</option>
+<option value="fa-star">⭐ Star (Excellence)</option>
+<option value="fa-leaf">🍃 Leaf (Eco-Friendly)</option>
+<option value="fa-users">👥 Users (Teamwork)</option>
+<option value="fa-lightbulb">💡 Lightbulb (Innovation)</option>
+<option value="fa-handshake">🤝 Handshake (Partnership)</option>
+<option value="fa-award">🏆 Award (Achievement)</option>
+<option value="fa-smile">😊 Smile (Happiness)</option>
+</select>
+</div>
+<input type="text" class="form-control mt-2" name="value_icon" id="value_icon" placeholder="Contoh: fa-seedling, fa-heart, fa-mug-hot" required>
+<small class="text-muted">
+Gunakan icon Font Awesome. Lihat daftar icon:
+<a href="https://fontawesome.com/icons" target="_blank" class="text-primary">fontawesome.com/icons</a>
+</small>
+</div>
+<div class="mb-3">
+<label class="form-label">Judul <span class="text-danger">*</span></label>
+<input type="text" class="form-control" name="value_title" id="value_title" required>
+</div>
+<div class="mb-3">
+<label class="form-label">Deskripsi <span class="text-danger">*</span></label>
+<textarea class="form-control" name="value_description" id="value_description" rows="3" required></textarea>
+</div>
+</div>
+<div class="modal-footer">
+<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+<i class="fas fa-times"></i> Batal
+</button>
+<button type="submit" class="btn btn-primary">
+<i class="fas fa-save"></i> Simpan
+</button>
+</div>
+</form>
+</div>
+</div>
+</div>
+
+<script>
+// ========== CONFIG KEYS ==========
+const TEAM_VIEW_KEY = 'about_team_view';
+const VALUES_VIEW_KEY = 'about_values_view';
+const TEAM_SORT_KEY = 'about_team_sort';
+const VALUES_SORT_KEY = 'about_values_sort';
+
+// ========== TOGGLE VIEW WITH LOCALSTORAGE ==========
+// Default: List View (false), Grid hanya jika user pernah pilih
+let isTeamGridView = localStorage.getItem(TEAM_VIEW_KEY) === 'grid';
+let isValuesGridView = localStorage.getItem(VALUES_VIEW_KEY) === 'grid';
+
+function toggleTeamView() {
+    isTeamGridView = !isTeamGridView;
+    localStorage.setItem(TEAM_VIEW_KEY, isTeamGridView ? 'grid' : 'list');
+    
+    const gridView = document.getElementById('teamGridView');
+    const listView = document.getElementById('teamListView');
+    const icon = document.getElementById('teamViewIcon');
+    const text = document.getElementById('teamViewText');
+    
+    if (!gridView || !listView) return;
+    
+    if (isTeamGridView) {
+        gridView.classList.remove('d-none');
+        listView.classList.add('d-none');
+        icon.className = 'fas fa-th-large';
+        text.textContent = 'Grid View';
+    } else {
+        gridView.classList.add('d-none');
+        listView.classList.remove('d-none');
+        icon.className = 'fas fa-list';
+        text.textContent = 'List View';
+    }
+}
+
+function toggleValuesView() {
+    isValuesGridView = !isValuesGridView;
+    localStorage.setItem(VALUES_VIEW_KEY, isValuesGridView ? 'grid' : 'list');
+    
+    const gridView = document.getElementById('valuesGridView');
+    const listView = document.getElementById('valuesListView');
+    const icon = document.getElementById('valuesViewIcon');
+    const text = document.getElementById('valuesViewText');
+    
+    if (!gridView || !listView) return;
+    
+    if (isValuesGridView) {
+        gridView.classList.remove('d-none');
+        listView.classList.add('d-none');
+        icon.className = 'fas fa-th-large';
+        text.textContent = 'Grid View';
+    } else {
+        gridView.classList.add('d-none');
+        listView.classList.remove('d-none');
+        icon.className = 'fas fa-list';
+        text.textContent = 'List View';
+    }
+}
+
+function applyViewPreference(type) {
+    const isGrid = type === 'team' ? isTeamGridView : isValuesGridView;
+    const gridView = document.getElementById(type + 'GridView');
+    const listView = document.getElementById(type + 'ListView');
+    const icon = document.getElementById(type + 'ViewIcon');
+    const text = document.getElementById(type + 'ViewText');
+    
+    if (!gridView || !listView) return;
+    
+    if (isGrid) {
+        gridView.classList.remove('d-none');
+        listView.classList.add('d-none');
+        icon.className = 'fas fa-th-large';
+        text.textContent = 'Grid View';
+    } else {
+        gridView.classList.add('d-none');
+        listView.classList.remove('d-none');
+        icon.className = 'fas fa-list';
+        text.textContent = 'List View';
+    }
+}
+
+// ========== SORTING WITH LOCALSTORAGE (PERSISTEN) ==========
+let sortState = {
+    team: JSON.parse(localStorage.getItem(TEAM_SORT_KEY)) || { column: null, direction: 'asc' },
+    values: JSON.parse(localStorage.getItem(VALUES_SORT_KEY)) || { column: null, direction: 'asc' }
+};
+
+function saveSortState(type) {
+    const key = type === 'team' ? TEAM_SORT_KEY : VALUES_SORT_KEY;
+    localStorage.setItem(key, JSON.stringify(sortState[type]));
+}
+
+function sortTable(column, tableId, type, fromLoad = false) {
+    const table = document.getElementById(tableId);
+    if (!table) return;
+    
+    const tbody = table.querySelector('tbody');
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+    
+    // Jika dari klik user, update state. Jika dari load, gunakan state yang ada.
+    if (!fromLoad) {
+        if (sortState[type].column === column) {
+            sortState[type].direction = sortState[type].direction === 'asc' ? 'desc' : 'asc';
+        } else {
+            sortState[type].column = column;
+            sortState[type].direction = 'asc';
+        }
+        saveSortState(type);
+    }
+    
+    const sortDirection = sortState[type].direction;
+    
+    // Reset semua icon sort
+    table.querySelectorAll('.sort-icon').forEach(icon => {
+        icon.className = 'fas fa-sort sort-icon';
+    });
+    
+    // Update icon kolom yang aktif
+    const currentHeader = table.querySelector(`.sortable[data-sort="${column}"]`);
+    if (currentHeader) {
+        const sortIcon = currentHeader.querySelector('.sort-icon');
+        if (sortIcon) {
+            sortIcon.className = sortDirection === 'asc' ? 'fas fa-sort-up sort-icon' : 'fas fa-sort-down sort-icon';
+        }
+    }
+    
+    // Sort rows berdasarkan data attribute
+    rows.sort((a, b) => {
+        let aValue, bValue;
+        
+        if (column === 'index') {
+            aValue = parseInt(a.dataset.index) || 0;
+            bValue = parseInt(b.dataset.index) || 0;
+        } else if (column === 'name') {
+            aValue = (a.dataset.nameSort || a.dataset.name || '').toLowerCase();
+            bValue = (b.dataset.nameSort || b.dataset.name || '').toLowerCase();
+        } else if (column === 'title') {
+            aValue = (a.dataset.titleSort || a.dataset.title || '').toLowerCase();
+            bValue = (b.dataset.titleSort || b.dataset.title || '').toLowerCase();
+        } else if (column === 'position') {
+            aValue = (a.dataset.position || '').toLowerCase();
+            bValue = (b.dataset.position || '').toLowerCase();
+        } else {
+            return 0;
+        }
+        
+        if (sortDirection === 'asc') {
+            return aValue > bValue ? 1 : (aValue < bValue ? -1 : 0);
+        } else {
+            return aValue < bValue ? 1 : (aValue > bValue ? -1 : 0);
+        }
+    });
+    
+    // Re-append rows yang sudah di-sort
+    rows.forEach(row => tbody.appendChild(row));
+    
+    // Update nomor urut (mulai dari 1) ✅
+    updateRowNumbers(tableId);
+    
+    // Restore icon sort setelah re-render
+    updateSortIcons(tableId, type);
+}
+
+function updateRowNumbers(tableId) {
+    const table = document.getElementById(tableId);
+    if (!table) return;
+    
+    const rows = table.querySelectorAll('tbody tr');
+    rows.forEach((row, index) => {
+        const numberCell = row.querySelector('td:first-child');
+        if (numberCell) {
+            numberCell.textContent = index + 1; // ✅ Mulai dari 1, bukan 2
+        }
+    });
+}
+
+function updateSortIcons(tableId, type) {
+    const table = document.getElementById(tableId);
+    if (!table) return;
+    
+    // Reset semua icon
+    table.querySelectorAll('.sort-icon').forEach(icon => {
+        icon.className = 'fas fa-sort sort-icon';
+    });
+    
+    // Restore icon sesuai state tersimpan
+    const column = sortState[type].column;
+    const direction = sortState[type].direction;
+    
+    if (column) {
+        const currentHeader = table.querySelector(`.sortable[data-sort="${column}"]`);
+        if (currentHeader) {
+            const sortIcon = currentHeader.querySelector('.sort-icon');
+            if (sortIcon) {
+                sortIcon.className = direction === 'asc' ? 'fas fa-sort-up sort-icon' : 'fas fa-sort-down sort-icon';
+            }
+        }
+    }
+}
+
+function applySavedSort(type, tableId) {
+    // ✅ Apply sort hanya jika ada column yang tersimpan
+    if (sortState[type].column) {
+        sortTable(sortState[type].column, tableId, type, true); // true = dari load, jangan toggle direction
+    }
+}
+
+// ========== EVENT LISTENERS & INIT ==========
+document.addEventListener('DOMContentLoaded', function() {
+    // 1. Apply view preference dari localStorage
+    applyViewPreference('team');
+    applyViewPreference('values');
+    
+    // 2. ✅ Apply saved sort setelah DOM siap (agar tidak reset setelah edit/reload)
+    applySavedSort('team', 'teamTable');
+    applySavedSort('values', 'valuesTable');
+    
+    // 3. Sorting headers - klik user
+    document.querySelectorAll('#teamTable .sortable').forEach(header => {
+        header.addEventListener('click', function() {
+            const column = this.dataset.sort;
+            sortTable(column, 'teamTable', 'team', false); // false = dari klik user, update state
+        });
+    });
+    
+    document.querySelectorAll('#valuesTable .sortable').forEach(header => {
+        header.addEventListener('click', function() {
+            const column = this.dataset.sort;
+            sortTable(column, 'valuesTable', 'values', false);
+        });
+    });
+    
+    // 4. Edit Team buttons
+    document.querySelectorAll('.edit-team-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const index = this.dataset.index;
+            const name = this.dataset.memberName;
+            const position = this.dataset.memberPosition;
+            const description = this.dataset.memberDescription;
+            document.getElementById('team_index').value = index;
+            document.getElementById('team_name').value = name || '';
+            document.getElementById('team_position').value = position || '';
+            document.getElementById('team_description').value = description || '';
+            document.getElementById('teamModalLabel').textContent = 'Edit Team Member';
+            const modal = new bootstrap.Modal(document.getElementById('teamModal'));
+            modal.show();
+        });
+    });
+    
+    // 5. Edit Value buttons
+    document.querySelectorAll('.edit-value-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const index = this.dataset.index;
+            const icon = this.dataset.valueIcon;
+            const title = this.dataset.valueTitle;
+            const description = this.dataset.valueDescription;
+            document.getElementById('value_index').value = index;
+            document.getElementById('value_icon').value = icon || '';
+            document.getElementById('value_icon_select').value = '';
+            document.getElementById('value_title').value = title || '';
+            document.getElementById('value_description').value = description || '';
+            document.getElementById('valueModalLabel').textContent = 'Edit Value';
+            const modal = new bootstrap.Modal(document.getElementById('valueModal'));
+            modal.show();
+        });
+    });
+    
+    // 6. Search - Team
+    document.getElementById('searchTeam')?.addEventListener('keyup', function(e) {
+        filterTeam(e.target.value.toLowerCase());
+    });
+    
+    // 7. Search - Values
+    document.getElementById('searchValues')?.addEventListener('keyup', function(e) {
+        filterValues(e.target.value.toLowerCase());
+    });
+    
+    // 8. Image Preview - Team
+    document.getElementById('team_image')?.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        const preview = document.getElementById('teamImagePreview');
+        const previewImg = document.getElementById('teamPreviewImg');
+        if (file && preview && previewImg) {
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                previewImg.src = event.target.result;
+                preview.style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        } else if (preview) {
+            preview.style.display = 'none';
+        }
+    });
+    
+    // 9. Image Preview - About
+    document.getElementById('about_image')?.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        const preview = document.getElementById('aboutImagePreview');
+        const previewImg = document.getElementById('aboutPreviewImg');
+        if (file && preview && previewImg) {
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                previewImg.src = event.target.result;
+                preview.style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        } else if (preview) {
+            preview.style.display = 'none';
+        }
+    });
+});
+
+// ========== HELPER FUNCTIONS ==========
+function resetTeamForm() {
+    document.querySelector('#teamModal form').reset();
+    document.getElementById('team_index').value = '';
+    document.getElementById('teamModalLabel').textContent = 'Tambah Team Member';
+    document.getElementById('teamImagePreview').style.display = 'none';
+}
+
+function resetValueForm() {
+    document.querySelector('#valueModal form').reset();
+    document.getElementById('value_index').value = '';
+    document.getElementById('valueModalLabel').textContent = 'Tambah Value';
+    document.getElementById('value_icon_select').value = '';
+}
+
+function updateIconInput() {
+    const select = document.getElementById('value_icon_select');
+    const input = document.getElementById('value_icon');
+    if (select.value) {
+        input.value = select.value;
+    }
+}
+
+function confirmDeleteTeam(name) {
+    return confirm(`Apakah Anda yakin ingin menghapus team member "${name}"?\nTindakan ini tidak dapat dibatalkan.`);
+}
+
+function confirmDeleteValue(title) {
+    return confirm(`Apakah Anda yakin ingin menghapus value "${title}"?\nTindakan ini tidak dapat dibatalkan.`);
+}
+
+function filterTeam(searchTerm) {
+    const cards = document.querySelectorAll('#teamGridView .col-md-4');
+    const rows = document.querySelectorAll('#teamListView tbody tr');
+    
+    cards.forEach(card => {
+        const name = card.dataset.name;
+        const position = card.dataset.position;
+        const matchesSearch = name.includes(searchTerm) || position.includes(searchTerm);
+        card.style.display = matchesSearch ? 'block' : 'none';
+    });
+    
+    rows.forEach(row => {
+        const name = row.dataset.name;
+        const position = row.dataset.position;
+        const matchesSearch = name.includes(searchTerm) || position.includes(searchTerm);
+        row.style.display = matchesSearch ? '' : 'none';
+    });
+}
+
+function filterValues(searchTerm) {
+    const cards = document.querySelectorAll('#valuesGridView .col-md-4');
+    const rows = document.querySelectorAll('#valuesListView tbody tr');
+    
+    cards.forEach(card => {
+        const title = card.dataset.title;
+        const icon = card.dataset.icon;
+        const matchesSearch = title.includes(searchTerm) || icon.includes(searchTerm);
+        card.style.display = matchesSearch ? 'block' : 'none';
+    });
+    
+    rows.forEach(row => {
+        const title = row.dataset.title;
+        const icon = row.dataset.icon;
+        const matchesSearch = title.includes(searchTerm) || icon.includes(searchTerm);
+        row.style.display = matchesSearch ? '' : 'none';
+    });
+}
+
+// Auto-scroll to tab when URL has hash
+window.addEventListener('load', function() {
+    const hash = window.location.hash;
+    if (hash) {
+        const tabTrigger = document.querySelector(`button[data-bs-target="${hash}"]`);
+        if (tabTrigger) {
+            tabTrigger.click();
+        }
+    }
+});
+</script>
+
+
+
+<style>
+.page-title { margin-bottom: 1.5rem; }
+.nav-tabs { border-bottom: 2px solid #dee2e6; }
+.nav-link { font-weight: 500; padding: 0.75rem 1.5rem; border: none; border-bottom: 2px solid transparent; transition: all 0.3s ease; }
+.nav-link:hover { border-bottom-color: #0d6efd; }
+.nav-link.active { color: #0d6efd; border-bottom-color: #0d6efd; background-color: #f8f9fa; }
+.card-img-top { border-top-left-radius: 0.375rem; border-top-right-radius: 0.375rem; }
+.badge { font-weight: 500; }
+.form-label { font-weight: 500; margin-bottom: 0.5rem; }
+.form-control:focus, .form-select:focus { border-color: #86b7fe; box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25); }
+.col-md-4 { transition: transform 0.2s, box-shadow 0.2s; }
+.col-md-4:hover { transform: translateY(-5px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+@media (max-width: 768px) { .card-footer { padding: 0.75rem; } .btn-sm { padding: 0.25rem 0.5rem; font-size: 0.875rem; } .nav-link { padding: 0.75rem 1rem; } }
+.fa { font-family: 'Font Awesome 5 Free'; font-weight: 900; }
+.fa-3x { margin-bottom: 1rem; }
+#aboutImagePreview, #teamImagePreview { background-color: #f8f9fa; padding: 10px; border-radius: 8px; }
+.card { border: 1px solid #dee2e6; border-radius: 8px; transition: all 0.3s ease; }
+.card:hover { border-color: #0d6efd; box-shadow: 0 4px 12px rgba(13, 110, 253, 0.15); }
+.card-body { padding: 1.25rem; }
+.card-footer { background-color: #f8f9fa; border-top: 1px solid #dee2e6; }
+.table { margin-bottom: 0; }
+.table thead th { font-weight: 600; background-color: #f8f9fa; border-bottom: 2px solid #dee2e6; padding: 0.75rem 1rem; }
+.table tbody td { padding: 0.75rem 1rem; vertical-align: middle; }
+.table-hover tbody tr:hover { background-color: #f8f9fa; }
+.table-light { background-color: #f8f9fa; }
+.sort-icon { margin-left: 5px; font-size: 0.8em; color: #6c757d; }
+.sortable { cursor: pointer; user-select: none; }
+.sortable:hover { background-color: #e9ecef; }
+.sortable .sort-icon { display: inline; }
+.img-thumbnail { padding: 0; border: 1px solid #dee2e6; border-radius: 0.25rem; background-color: #fff; }
+.card-body h5 { font-weight: 600; margin-bottom: 0.25rem; }
+.card-body p.text-muted { font-size: 0.875rem; }
+#aboutImagePreview img, #teamImagePreview img { max-width: 100%; height: auto; object-fit: contain; }
+.fa-seedling, .fa-heart, .fa-mug-hot, .fa-star, .fa-leaf, .fa-users, .fa-lightbulb, .fa-handshake, .fa-award, .fa-smile { font-family: 'Font Awesome 5 Free'; font-weight: 900; }
+</style>
+{% endblock %}

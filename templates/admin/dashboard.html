@@ -1,0 +1,793 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Dashboard - Management Cafe Admin{% endblock %}
+
+{% block breadcrumb %}
+Dashboard
+{% endblock %}
+
+{% block content %}
+<div class="page-title">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h1><i class="fas fa-tachometer-alt"></i> Dashboard</h1>
+            <p>Overview statistik dan manajemen website cafe Anda</p>
+        </div>
+        <div class="btn-group">
+            <!-- EXPORT BUTTON -->
+            <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#exportModal">
+                <i class="fas fa-download"></i> Export Data
+            </button>
+            <!-- IMPORT BUTTON -->
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#importModal">
+                <i class="fas fa-upload"></i> Import Data
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- EXPORT & IMPORT INFO CARD -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body bg-light">
+        <h6 class="mb-2"><i class="fas fa-database"></i> Backup & Restore Database</h6>
+        <p class="text-muted mb-0 small">
+            <strong>Export:</strong> Download semua data sebagai JSON. 
+            <strong>Import:</strong> Restore dari file backup. 
+            <span class="text-warning">⚠️ Backup data sebelum import!</span>
+        </p>
+    </div>
+</div>
+
+<!-- ==================== ALERT PROMO EXPIRED ==================== -->
+{% if promo_expired %}
+<div class="alert alert-danger alert-dismissible fade show" role="alert">
+    <h6 class="alert-heading"><i class="fas fa-exclamation-circle"></i> Promo Kadaluarsa!</h6>
+    <div class="mt-2">
+        {% for promo in promo_expired %}
+            <span class="badge bg-danger me-2">{{ promo.title }}</span>
+            <small>Berakhir {{ promo.days_expired }} hari yang lalu ({{ promo.valid_until }})</small>
+            {% if not loop.last %} • {% endif %}
+        {% endfor %}
+    </div>
+    <a href="{{ url_for('promo.promo') }}" class="btn btn-sm btn-outline-danger mt-2">
+        <i class="fas fa-cog"></i> Kelola Promo
+    </a>
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
+<!-- ==================== ALERT PROMO EXPIRING ==================== -->
+{% if promo_expiring %}
+<div class="alert alert-warning alert-dismissible fade show" role="alert">
+    <h6 class="alert-heading"><i class="fas fa-exclamation-triangle"></i> Promo Segera Berakhir!</h6>
+    <div class="mt-2">
+        {% for promo in promo_expiring %}
+            <span class="badge bg-danger me-2">{{ promo.title }}</span>
+            {% if promo.days_left == 0 %}
+                <small>Berakhir Hari Ini!</small>
+            {% elif promo.days_left == 1 %}
+                <small>Berakhir Besok</small>
+            {% else %}
+                <small>{{ promo.days_left }} Hari Lagi</small>
+            {% endif %}
+            {% if not loop.last %} • {% endif %}
+        {% endfor %}
+    </div>
+    <a href="{{ url_for('promo.promo') }}" class="btn btn-sm btn-outline-warning mt-2">
+        <i class="fas fa-cog"></i> Kelola Promo
+    </a>
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
+<!-- ==================== STATISTICS CARDS ==================== -->
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0">
+                        <span class="avatar avatar-lg bg-primary-lt text-primary">
+                            <i class="fas fa-users"></i>
+                        </span>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <h6 class="text-muted mb-1">Total Pengunjung</h6>
+                        <h3 class="mb-0">{{ total_visitors }}</h3>
+                        <small class="text-muted">7 Hari Terakhir</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3 mb-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0">
+                        <span class="avatar avatar-lg bg-success-lt text-success">
+                            <i class="fas fa-database"></i>
+                        </span>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <h6 class="text-muted mb-1">Storage MongoDB</h6>
+                        <h3 class="mb-0">{{ storage_info.total_mb }} MB</h3>
+                        <small class="text-muted">{{ storage_info.percentage }}% dari {{ storage_info.limit_mb }} MB</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3 mb-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0">
+                        <span class="avatar avatar-lg bg-info-lt text-info">
+                            <i class="fas fa-utensils"></i>
+                        </span>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <h6 class="text-muted mb-1">Menu Items</h6>
+                        <h3 class="mb-0">{{ menu_count }}</h3>
+                        <small class="text-muted">Total Menu</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3 mb-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0">
+                        <span class="avatar avatar-lg bg-warning-lt text-warning">
+                            <i class="fas fa-images"></i>
+                        </span>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <h6 class="text-muted mb-1">Gallery</h6>
+                        <h3 class="mb-0">{{ gallery_count }}</h3>
+                        <small class="text-muted">Total Foto</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== MAIN CONTENT ROW ==================== -->
+<div class="row">
+    <!-- VISITOR STATISTICS CHART -->
+    <div class="col-lg-6 mb-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-chart-line"></i> Grafik Pengunjung (7 Hari)</h5>
+                    <button class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#clearVisitorsModal">
+                        <i class="fas fa-trash"></i> Hapus Data
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                {% if stats %}
+                <canvas id="visitorChart" height="200"></canvas>
+                
+                <div class="mt-4">
+                    <h6 class="text-muted mb-3"><i class="fas fa-table"></i> Detail Data</h6>
+                    <div class="table-responsive">
+                        <table class="table table-hover table-sm align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="ps-3">Tanggal</th>
+                                    <th class="text-center pe-3">Total Kunjungan</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for day in stats %}
+                                <tr>
+                                    <td class="ps-3">
+                                        <span class="badge bg-light text-dark">{{ day.date }}</span>
+                                    </td>
+                                    <td class="text-center pe-3">
+                                        <span class="badge bg-primary">{{ day.count }}</span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-chart-bar fa-3x text-muted mb-3"></i>
+                    <p class="text-muted mb-0">Belum ada data pengunjung</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- STORAGE MONITORING -->
+    <div class="col-lg-6 mb-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-hdd"></i> Storage MongoDB (Semua Data)</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-4">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Total Usage</span>
+                        <span class="fw-bold">{{ storage_info.total_mb }} MB / {{ storage_info.limit_mb }} MB</span>
+                    </div>
+                    <div class="progress" style="height: 24px;">
+                        <div class="progress-bar {% if storage_info.percentage > 80 %}bg-danger{% elif storage_info.percentage > 60 %}bg-warning{% else %}bg-success{% endif %}" 
+                             role="progressbar" 
+                             aria-valuenow="{{ storage_info.percentage }}" 
+                             aria-valuemin="0" 
+                             aria-valuemax="100">
+                            {{ storage_info.percentage }}%
+                        </div>
+                    </div>
+                    {% if storage_info.percentage > 80 %}
+                    <small class="text-danger mt-1 d-block"><i class="fas fa-exclamation-circle"></i> Storage hampir penuh!</small>
+                    {% elif storage_info.percentage > 60 %}
+                    <small class="text-warning mt-1 d-block"><i class="fas fa-exclamation-triangle"></i> Pertimbangkan untuk membersihkan data</small>
+                    {% else %}
+                    <small class="text-success mt-1 d-block"><i class="fas fa-check-circle"></i> Storage dalam kondisi baik</small>
+                    {% endif %}
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-sm table-bordered align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="ps-3">Collection</th>
+                                <th class="text-center">Ukuran</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="ps-3"><i class="fas fa-users text-primary"></i> Users</td>
+                                <td class="text-center"><span class="badge bg-primary">{{ (storage_info.users / 1024 / 1024) | round(3) }} MB</span></td>
+                            </tr>
+                            <tr>
+                                <td class="ps-3"><i class="fas fa-cog text-secondary"></i> Settings</td>
+                                <td class="text-center"><span class="badge bg-secondary">{{ (storage_info.settings / 1024 / 1024) | round(3) }} MB</span></td>
+                            </tr>
+                            <tr>
+                                <td class="ps-3"><i class="fas fa-utensils text-info"></i> Menu</td>
+                                <td class="text-center"><span class="badge bg-info">{{ (storage_info.menu / 1024 / 1024) | round(3) }} MB</span></td>
+                            </tr>
+                            <tr>
+                                <td class="ps-3"><i class="fas fa-images text-warning"></i> Gallery</td>
+                                <td class="text-center"><span class="badge bg-warning">{{ (storage_info.gallery / 1024 / 1024) | round(3) }} MB</span></td>
+                            </tr>
+                            <tr>
+                                <td class="ps-3"><i class="fas fa-tag text-success"></i> Promo</td>
+                                <td class="text-center"><span class="badge bg-success">{{ (storage_info.promo / 1024 / 1024) | round(3) }} MB</span></td>
+                            </tr>
+                            <tr>
+                                <td class="ps-3"><i class="fas fa-share-alt text-danger"></i> Social</td>
+                                <td class="text-center"><span class="badge bg-danger">{{ (storage_info.social / 1024 / 1024) | round(3) }} MB</span></td>
+                            </tr>
+                            <tr>
+                                <td class="ps-3"><i class="fas fa-chart-line text-dark"></i> Visitors</td>
+                                <td class="text-center"><span class="badge bg-dark">{{ (storage_info.visitors / 1024 / 1024) | round(3) }} MB</span></td>
+                            </tr>
+                            <tr>
+                                <td class="ps-3"><i class="fas fa-tags text-info"></i> Categories</td>
+                                <td class="text-center"><span class="badge bg-info">{{ (storage_info.categories / 1024 / 1024) | round(3) }} MB</span></td>
+                            </tr>
+                        </tbody>
+                        <tfoot class="table-light">
+                            <tr>
+                                <td class="ps-3"><strong><i class="fas fa-database"></i> TOTAL</strong></td>
+                                <td class="text-center"><strong class="text-primary">{{ storage_info.total_mb }} MB</strong></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+
+                <div class="alert alert-info alert-dismissible fade show mb-0 mt-3" role="alert">
+                    <small>
+                        <i class="fas fa-info-circle"></i> Menghitung semua data: binary (gambar) + text (string) + dict + list + int + float + bool.
+                    </small>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- RECENT MENU -->
+    <div class="col-lg-6 mb-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-utensils"></i> Menu Terbaru</h5>
+                    <a href="{{ url_for('menu.menu') }}" class="btn btn-primary btn-sm">
+                        <i class="fas fa-plus"></i> Tambah
+                    </a>
+                </div>
+            </div>
+            <div class="card-body">
+                {% if recent_menu %}
+                <div class="table-responsive">
+                    <table class="table table-hover table-sm align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="ps-3">#</th>
+                                <th>Nama Menu</th>
+                                <th class="text-center">Harga</th>
+                                <th class="text-center pe-3">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in recent_menu %}
+                            <tr>
+                                <td class="ps-3 text-muted">{{ loop.index }}</td>
+                                <td>
+                                    <div class="fw-medium">{{ item.name }}</div>
+                                    <small class="text-muted">{{ item.category }}</small>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge bg-success-lt text-success">Rp {{ "{:,}".format(item.price) }}</span>
+                                </td>
+                                <td class="text-center pe-3">
+                                    {% if item.available %}
+                                    <span class="badge bg-success"><i class="fas fa-check"></i> Tersedia</span>
+                                    {% else %}
+                                    <span class="badge bg-danger"><i class="fas fa-times"></i> Habis</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-utensils fa-3x text-muted mb-3"></i>
+                    <p class="text-muted mb-3">Belum ada menu</p>
+                    <a href="{{ url_for('menu.menu') }}" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Tambah Menu Pertama
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- RECENT PROMO -->
+    <div class="col-lg-6 mb-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-tag"></i> Promo Terbaru</h5>
+                    <a href="{{ url_for('promo.promo') }}" class="btn btn-primary btn-sm">
+                        <i class="fas fa-plus"></i> Tambah
+                    </a>
+                </div>
+            </div>
+            <div class="card-body">
+                {% if recent_promo %}
+                <div class="table-responsive">
+                    <table class="table table-hover table-sm align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="ps-3">#</th>
+                                <th>Judul Promo</th>
+                                <th class="text-center">Diskon</th>
+                                <th class="text-center pe-3">Berlaku Sampai</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for promo in recent_promo %}
+                            <tr>
+                                <td class="ps-3 text-muted">{{ loop.index }}</td>
+                                <td>
+                                    <div class="fw-medium">{{ promo.title }}</div>
+                                    {% if promo.description %}
+                                    <small class="text-muted text-truncate d-block" style="max-width: 200px;">{{ promo.description[:50] }}...</small>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">
+                                    {% if promo.discount %}
+                                    <span class="badge bg-warning text-dark">{{ promo.discount }}</span>
+                                    {% else %}
+                                    <span class="badge bg-light text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center pe-3">
+                                    {% if promo.valid_until %}
+                                    <span class="badge {% if promo|is_promo_active %}bg-success{% else %}bg-danger{% endif %}">
+                                        {{ promo.valid_until|datetimeformat('%d %b %Y') }}
+                                    </span>
+                                    {% else %}
+                                    <span class="badge bg-light text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-tag fa-3x text-muted mb-3"></i>
+                    <p class="text-muted mb-3">Belum ada promo</p>
+                    <a href="{{ url_for('promo.promo') }}" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Tambah Promo Pertama
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== MODAL: HAPUS VISITOR ==================== -->
+<div class="modal fade" id="clearVisitorsModal" tabindex="-1" aria-labelledby="clearVisitorsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="clearVisitorsModalLabel">
+                    <i class="fas fa-trash"></i> Hapus Data Visitor
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted mb-3">Pilih opsi penghapusan data visitor:</p>
+                <div class="d-grid gap-2">
+                    <form action="{{ url_for('dashboard.clear_visitors') }}" method="POST">
+                        <button type="submit" class="btn btn-danger w-100 py-2" 
+                                onclick="return confirm('⚠️ PERINGATAN: Ini akan menghapus SEMUA data visitor. Lanjutkan?')">
+                            <i class="fas fa-trash"></i> Hapus Semua Data
+                        </button>
+                    </form>
+                    <form action="{{ url_for('dashboard.clear_visitors_old', days=7) }}" method="POST">
+                        <button type="submit" class="btn btn-warning w-100 py-2"
+                                onclick="return confirm('Hapus data visitor lebih dari 7 hari?')">
+                            <i class="fas fa-calendar-times"></i> Hapus Data > 7 Hari
+                        </button>
+                    </form>
+                    <form action="{{ url_for('dashboard.clear_visitors_old', days=30) }}" method="POST">
+                        <button type="submit" class="btn btn-info w-100 py-2 text-white"
+                                onclick="return confirm('Hapus data visitor lebih dari 30 hari?')">
+                            <i class="fas fa-calendar-times"></i> Hapus Data > 30 Hari
+                        </button>
+                    </form>
+                </div>
+                <div class="alert alert-warning mt-3 mb-0">
+                    <small>
+                        <i class="fas fa-exclamation-triangle"></i> <strong>Catatan:</strong> Penghapusan data tidak dapat dibatalkan. Pastikan Anda telah membackup data jika diperlukan.
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== MODAL: EXPORT DATABASE ==================== -->
+<div class="modal fade" id="exportModal" tabindex="-1" aria-labelledby="exportModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title" id="exportModalLabel">
+                    <i class="fas fa-download"></i> Export Database
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="{{ url_for('dashboard.export_database') }}">
+                <div class="modal-body">
+                    <p class="text-muted mb-3">Pilih collection yang akan diexport:</p>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="collections" value="settings" id="exp_settings" checked>
+                            <label class="form-check-label" for="exp_settings">Settings</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="collections" value="menu" id="exp_menu" checked>
+                            <label class="form-check-label" for="exp_menu">Menu</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="collections" value="gallery" id="exp_gallery" checked>
+                            <label class="form-check-label" for="exp_gallery">Gallery</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="collections" value="promo" id="exp_promo" checked>
+                            <label class="form-check-label" for="exp_promo">Promo</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="collections" value="social" id="exp_social" checked>
+                            <label class="form-check-label" for="exp_social">Social Media</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="collections" value="categories" id="exp_categories" checked>
+                            <label class="form-check-label" for="exp_categories">Categories</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="collections" value="about" id="exp_about" checked>
+                            <label class="form-check-label" for="exp_about">About Page</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="collections" value="users" id="exp_users" disabled>
+                            <label class="form-check-label text-muted" for="exp_users">Users (Tidak dapat diexport untuk keamanan)</label>
+                        </div>
+                    </div>
+                    <div class="alert alert-info mb-0">
+                        <small><i class="fas fa-info-circle"></i> Data gambar akan diencode ke base64 untuk disimpan dalam file JSON.</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-download"></i> Export
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== MODAL: IMPORT DATABASE ==================== -->
+<div class="modal fade" id="importModal" tabindex="-1" aria-labelledby="importModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-warning">
+                <h5 class="modal-title" id="importModalLabel">
+                    <i class="fas fa-upload"></i> Import Database
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="{{ url_for('dashboard.import_database') }}" enctype="multipart/form-data" id="importForm">
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <strong>⚠️ PERINGATAN!</strong>
+                        <ul class="mb-0">
+                            <li>Pastikan file backup valid dan dari sumber terpercaya</li>
+                            <li><strong>Smart Import:</strong> Data duplikat akan di-skip, data baru akan ditambahkan</li>
+                            <li><strong>Settings & About:</strong> Hanya update field yang kosong (merge)</li>
+                            <li>Password user tidak akan diimport (keamanan)</li>
+                        </ul>
+                    </div>
+                    
+                    <!-- STEP 1: Upload File -->
+                    <div class="mb-3">
+                        <label for="import_file" class="form-label">Pilih File Backup (.json)</label>
+                        <input type="file" class="form-control" id="import_file" name="import_file" accept=".json" required>
+                        <div class="form-text">File akan dibaca untuk menampilkan collection yang tersedia</div>
+                    </div>
+                    
+                    <!-- STEP 2: Collection Info (Hidden until file selected) -->
+                    <div id="collectionInfo" class="mb-3" style="display: none;">
+                        <div class="alert alert-info">
+                            <h6 class="mb-2"><i class="fas fa-database"></i> Collection Tersedia di File:</h6>
+                            <div id="collectionList" class="row"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- STEP 3: Collection Checkboxes (Hidden until file selected) -->
+                    <div id="collectionCheckboxes" class="mb-3" style="display: none;">
+                        <label class="form-label">Pilih Collection yang akan diimport</label>
+                        <small class="text-muted">Kosongkan untuk import semua collection</small>
+                        <div class="row mt-2" id="checkboxContainer"></div>
+                    </div>
+                    
+                    <!-- STEP 4: Import Mode -->
+                    <div id="importOptions" class="mb-3" style="display: none;">
+                        <label class="form-label">Mode Import</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="import_mode" id="mode_smart" value="smart" checked>
+                            <label class="form-check-label" for="mode_smart">
+                                <strong>Smart (Pintar)</strong> - Skip duplikat, tambah data baru, merge settings/about
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="import_mode" id="mode_replace" value="replace">
+                            <label class="form-check-label" for="mode_replace">
+                                <strong>Replace (Ganti)</strong> - Timpa semua data existing (kecuali users)
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-info mb-0" id="importHelp" style="display: none;">
+                        <small>
+                            <i class="fas fa-lightbulb"></i> 
+                            <strong>Cara kerja Smart Import:</strong><br>
+                            • <strong>Menu:</strong> Cek nama + kategori + harga. Jika sama → skip, jika beda → tambah<br>
+                            • <strong>Gallery:</strong> Cek filename + caption. Jika sama → skip, jika beda → tambah<br>
+                            • <strong>Promo:</strong> Cek title + valid_until. Jika sama → skip, jika beda → tambah<br>
+                            • <strong>Settings & About:</strong> Update hanya field yang kosong (merge)
+                        </small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-warning" id="submitImport" style="display: none;" 
+                            onclick="return confirm('Yakin ingin import data? Pastikan backup sudah dilakukan!')">
+                        <i class="fas fa-upload"></i> Import Data
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+<script>
+// Auto reload setiap 5 menit
+setTimeout(function () {
+    location.reload();
+}, 300000);
+
+// Chart visitor
+document.addEventListener("DOMContentLoaded", function () {
+    const canvas = document.getElementById("visitorChart");
+    if (!canvas) return;
+
+    const ctx = canvas.getContext("2d");
+    const statsData = JSON.parse(document.getElementById("visitor-data").textContent);
+
+    const labels = statsData.map(item => item.date);
+    const dataValues = statsData.map(item => item.count);
+
+    const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+    gradient.addColorStop(0, "rgba(13, 110, 253, 0.5)");
+    gradient.addColorStop(1, "rgba(13, 110, 253, 0.05)");
+
+    new Chart(ctx, {
+        type: "line",
+        data: {
+            labels: labels,
+            datasets: [{
+                label: "Total Kunjungan",
+                data: dataValues,
+                borderColor: "rgb(13, 110, 253)",
+                backgroundColor: gradient,
+                borderWidth: 2,
+                fill: true,
+                tension: 0.4
+            }]
+        }
+    });
+
+    // ==================== IMPORT FILE READER ====================
+    const importFileInput = document.getElementById('import_file');
+    const collectionInfo = document.getElementById('collectionInfo');
+    const collectionCheckboxes = document.getElementById('collectionCheckboxes');
+    const importOptions = document.getElementById('importOptions');
+    const importHelp = document.getElementById('importHelp');
+    const submitImport = document.getElementById('submitImport');
+    const collectionList = document.getElementById('collectionList');
+    const checkboxContainer = document.getElementById('checkboxContainer');
+
+    if (importFileInput) {
+        importFileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) {
+                resetImportForm();
+                return;
+            }
+
+            if (!file.name.endsWith('.json')) {
+                alert('File harus berformat JSON!');
+                resetImportForm();
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                try {
+                    const jsonData = JSON.parse(event.target.result);
+                    
+                    if (!jsonData.collections || typeof jsonData.collections !== 'object') {
+                        alert('Format file tidak valid! File backup harus memiliki field "collections".');
+                        resetImportForm();
+                        return;
+                    }
+
+                    const collections = Object.keys(jsonData.collections);
+                    if (collections.length === 0) {
+                        alert('Tidak ada collection di file backup!');
+                        resetImportForm();
+                        return;
+                    }
+
+                    // Tampilkan info collection
+                    displayCollectionInfo(jsonData.collections);
+                    displayCollectionCheckboxes(collections);
+                    
+                    // Show all import options
+                    collectionInfo.style.display = 'block';
+                    collectionCheckboxes.style.display = 'block';
+                    importOptions.style.display = 'block';
+                    importHelp.style.display = 'block';
+                    submitImport.style.display = 'inline-block';
+
+                } catch (error) {
+                    alert('File JSON tidak valid! Error: ' + error.message);
+                    resetImportForm();
+                }
+            };
+            reader.onerror = function() {
+                alert('Gagal membaca file!');
+                resetImportForm();
+            };
+            reader.readAsText(file);
+        });
+    }
+
+    function displayCollectionInfo(collections) {
+        let html = '';
+        for (const [name, data] of Object.entries(collections)) {
+            const count = data.count || (data.data ? data.data.length : 0);
+            const badgeClass = name === 'users' ? 'bg-secondary' : 
+                               name === 'settings' || name === 'about' ? 'bg-info' :
+                               name === 'menu' || name === 'gallery' ? 'bg-success' :
+                               name === 'promo' ? 'bg-warning' : 'bg-primary';
+            
+            html += `
+                <div class="col-md-4 mb-2">
+                    <span class="badge ${badgeClass} me-1">${name}</span>
+                    <small class="text-muted">${count} data</small>
+                </div>
+            `;
+        }
+        collectionList.innerHTML = html;
+    }
+
+    function displayCollectionCheckboxes(collections) {
+        let html = '<div class="col-md-6">';
+        const disabledCollections = ['users']; // Users tidak bisa diimport
+        
+        collections.forEach((name, index) => {
+            const isDisabled = disabledCollections.includes(name);
+            const halfPoint = Math.ceil(collections.length / 2);
+            
+            if (index === halfPoint) {
+                html += '</div><div class="col-md-6">';
+            }
+            
+            html += `
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" 
+                           name="collections" value="${name}" 
+                           id="coll_${name}" ${isDisabled ? 'disabled' : 'checked'}>
+                    <label class="form-check-label ${isDisabled ? 'text-muted' : ''}" 
+                           for="coll_${name}">
+                        ${name.charAt(0).toUpperCase() + name.slice(1)}
+                        ${isDisabled ? ' (Tidak dapat diimport)' : ''}
+                    </label>
+                </div>
+            `;
+        });
+        html += '</div>';
+        checkboxContainer.innerHTML = html;
+    }
+
+    function resetImportForm() {
+        collectionInfo.style.display = 'none';
+        collectionCheckboxes.style.display = 'none';
+        importOptions.style.display = 'none';
+        importHelp.style.display = 'none';
+        submitImport.style.display = 'none';
+        collectionList.innerHTML = '';
+        checkboxContainer.innerHTML = '';
+    }
+});
+</script>
+
+{% if stats_chart %}
+<script type="application/json" id="visitor-data">
+{{ stats_chart | tojson }}
+</script>
+{% endif %}
+
+{% endblock %}

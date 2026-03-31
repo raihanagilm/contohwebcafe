@@ -1,0 +1,631 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Promo Management - Management Cafe Admin{% endblock %}
+
+{% block content %}
+<!-- CSS Tambahan untuk Badge Expiry (Minimal, tidak konflik) -->
+<style>
+    .promo-expiry-badge {
+        font-size: 0.7rem;
+        padding: 0.2em 0.5em;
+        border-radius: 3px;
+        font-weight: 600;
+        margin-left: 6px;
+        color: #fff;
+    }
+    .expiry-expired { background-color: #dc3545; }
+    .expiry-soon { background-color: #ffc107; color: #000 !important; }
+    .expiry-active { background-color: #28a745; }
+    
+    /* Fix untuk base64 image display */
+    img[src^="image"] { max-width: 100%; height: auto; }
+</style>
+
+<div class="page-title">
+    <h1><i class="fas fa-tags"></i> Manajemen Promo</h1>
+    <p>Kelola promo dan diskon cafe Anda</p>
+</div>
+
+<!-- Filter dan Tombol Aksi -->
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-body">
+        <div class="row align-items-center">
+            <div class="col-md-4 mb-2 mb-md-0">
+                <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-search"></i></span>
+                    <input type="text" class="form-control" id="searchPromo" placeholder="Cari promo...">
+                </div>
+            </div>
+            <div class="col-md-3 mb-2 mb-md-0">
+                <select class="form-select" id="filterVisibility">
+                    <option value="">Semua Status</option>
+                    <option value="1">Tampilkan</option>
+                    <option value="0">Sembunyikan</option>
+                </select>
+            </div>
+            <div class="col-md-5 text-md-end text-center mt-2 mt-md-0">
+                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#promoModal" onclick="resetForm()">
+                    <i class="fas fa-plus"></i> Tambah Promo
+                </button>
+                <button type="button" class="btn btn-outline-secondary" onclick="toggleGridView()">
+                    <i class="fas fa-list" id="viewIcon"></i> <span id="viewText">Grid View</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Promo Cards (Grid View) - DEFAULT HIDDEN -->
+<div id="gridView" class="row g-3 d-none">
+    {% for promo in promo %}
+    <div class="col-md-4 col-lg-3" 
+         data-name="{{ promo.title|lower }}" 
+         data-status="{{ '1' if promo.visible|default(true) else '0' }}"
+         data-valid-until="{{ promo.valid_until }}">
+        <div class="card h-100 shadow-sm border-0">
+            {% if promo.image_url %}
+            <img src="{{ promo.image_url }}" 
+                 class="card-img-top" alt="{{ promo.title }}" style="height: 180px; object-fit: cover;">
+            {% else %}
+            <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 180px;">
+                <i class="fas fa-tags text-muted" style="font-size: 3rem;"></i>
+            </div>
+            {% endif %}
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="card-title mb-1">
+                            {{ promo.title }}
+                            <span class="promo-expiry-badge expiry-active">Cek...</span>
+                        </h6>
+                        {% if promo.discount %}
+                        <span class="badge bg-info text-white">{{ promo.discount }}</span>
+                        {% endif %}
+                    </div>
+                    <span class="badge bg-{{ 'success' if promo.visible|default(true) else 'secondary' }}">
+                        {{ 'Tampilkan' if promo.visible|default(true) else 'Sembunyikan' }}
+                    </span>
+                </div>
+                <p class="card-text small text-muted mb-2">{{ promo.description|truncate(60) }}</p>
+                <h5 class="mb-3">
+                    {% if promo.valid_until %}
+                    <small class="text-muted">
+                        <i class="fas fa-clock"></i> Berlaku hingga: <span class="expiry-date-text">{{ promo.valid_until }}</span>
+                    </small>
+                    {% endif %}
+                </h5>
+            </div>
+            <div class="card-footer bg-white border-top">
+                <div class="d-flex justify-content-between">
+                    <button class="btn btn-sm btn-outline-primary" onclick="editPromo('{{ promo._id }}')">
+                        <i class="fas fa-edit"></i> Edit
+                    </button>
+                    <form method="POST" action="{{ url_for('promo.promo_delete', promo_id=promo._id) }}" style="display: inline;" onsubmit="return confirmDelete('{{ promo.title }}')">
+                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                            <i class="fas fa-trash"></i> Hapus
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="col-12 text-center py-5">
+        <i class="fas fa-tags fa-3x text-muted mb-3"></i>
+        <h5 class="text-muted">Belum ada promo</h5>
+        <p class="text-muted">Klik tombol "Tambah Promo" untuk menambahkan promo pertama Anda</p>
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#promoModal" onclick="resetForm()">
+            <i class="fas fa-plus"></i> Tambah Promo Sekarang
+        </button>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Promo Table (List View) - DEFAULT VISIBLE -->
+<div id="listView" class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0" id="promoTable">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width: 50px; cursor: pointer;" class="sortable" data-sort="index" title="Klik untuk sortir">#</th>
+                        <th style="width: 100px;">Gambar</th>
+                        <th style="cursor: pointer;" class="sortable" data-sort="name" title="Klik untuk sortir">Judul Promo <i class="fas fa-sort sort-icon"></i></th>
+                        <th style="cursor: pointer;" class="sortable" data-sort="discount" title="Klik untuk sortir">Diskon <i class="fas fa-sort sort-icon"></i></th>
+                        <th style="cursor: pointer;" class="sortable" data-sort="date" title="Klik untuk sortir">Berlaku Hingga <i class="fas fa-sort sort-icon"></i></th>
+                        <th style="cursor: pointer;" class="sortable" data-sort="status" title="Klik untuk sortir">Status <i class="fas fa-sort sort-icon"></i></th>
+                        <th style="width: 120px;">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for promo in promo %}
+                    <tr data-name="{{ promo.title|lower }}" 
+                        data-index="{{ loop.index0 }}" 
+                        data-discount="{{ promo.discount|lower if promo.discount else '' }}"
+                        data-date="{{ promo.valid_until|default('1970-01-01') }}"
+                        data-status="{{ '1' if promo.visible|default(true) else '0' }}"
+                        data-valid-until="{{ promo.valid_until }}">
+                        <td class="text-center">{{ loop.index }}</td>
+                        <td>
+                            {% if promo.image_url %}
+                            <img src="{{ promo.image_url }}" 
+                                 alt="{{ promo.title }}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 4px;">
+                            {% else %}
+                            <div class="bg-light d-flex align-items-center justify-content-center" style="width: 60px; height: 60px; border-radius: 4px;">
+                                <i class="fas fa-tags text-muted"></i>
+                            </div>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <strong>{{ promo.title }}</strong>
+                            {% if promo.discount %}
+                            <br><span class="badge bg-info text-white mt-1">{{ promo.discount }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if promo.discount %}
+                            {{ promo.discount }}
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if promo.valid_until %}
+                            {{ promo.valid_until }}
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge bg-{{ 'success' if promo.visible|default(true) else 'secondary' }}">
+                                {{ 'Tampilkan' if promo.visible|default(true) else 'Sembunyikan' }}
+                            </span>
+                            <span class="promo-expiry-badge expiry-active">Cek...</span>
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-primary mb-1" onclick="editPromo('{{ promo._id }}')">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <form method="POST" action="{{ url_for('promo.promo_delete', promo_id=promo._id) }}" style="display: inline;" onsubmit="return confirmDelete('{{ promo.title }}')">
+                                <button type="submit" class="btn btn-sm btn-danger">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Promo Modal (TIDAK DIUBAH) -->
+<div class="modal fade" id="promoModal" tabindex="-1" aria-labelledby="promoModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form method="POST" action="{{ url_for('promo.promo_add') }}" enctype="multipart/form-data" id="promoForm">
+                <input type="hidden" name="promo_id" id="promo_id">
+                
+                <div class="modal-header">
+                    <h5 class="modal-title" id="promoModalLabel">Tambah Promo Baru</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Judul Promo <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="title" id="title" required>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Diskon</label>
+                            <input type="text" class="form-control" name="discount" id="discount" placeholder="Contoh: 20% OFF">
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Berlaku Hingga</label>
+                            <input type="date" class="form-control" name="valid_until" id="valid_until">
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Status</label>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" name="visible" id="visible" checked>
+                                <label class="form-check-label" for="visible">Tampilkan</label>
+                            </div>
+                        </div>
+                        
+                        <div class="col-12 mb-3">
+                            <label class="form-label">Deskripsi</label>
+                            <textarea class="form-control" name="description" id="description" rows="3"></textarea>
+                        </div>
+                        
+                        <div class="col-12 mb-3">
+                            <label class="form-label">Upload Gambar Promo</label>
+                            <input type="file" class="form-control" name="image" id="image" accept="image/*">
+                            <small class="text-muted">Format: JPG, PNG, WEBP (Max 2MB)</small>
+                            <div id="imagePreview" class="mt-2" style="display: none;">
+                                <img id="previewImg" src="" alt="Preview" style="max-width: 200px; max-height: 200px; border-radius: 4px;">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times"></i> Batal
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Simpan Promo
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
+<script>
+// ========== TOGGLE VIEW WITH LOCALSTORAGE ==========
+let isGridView = localStorage.getItem('promo_view') === 'grid';
+
+function toggleGridView() {
+    isGridView = !isGridView;
+    localStorage.setItem('promo_view', isGridView ? 'grid' : 'list');
+    
+    document.getElementById('gridView').classList.toggle('d-none');
+    document.getElementById('listView').classList.toggle('d-none');
+    
+    const icon = document.getElementById('viewIcon');
+    const text = document.getElementById('viewText');
+    
+    if (isGridView) {
+        icon.className = 'fas fa-th-large';
+        text.textContent = 'Grid View';
+    } else {
+        icon.className = 'fas fa-list';
+        text.textContent = 'List View';
+    }
+}
+
+// ========== SORTING WITH LOCALSTORAGE (PERSISTEN) ==========
+// Load sort state dari localStorage
+let sortState = JSON.parse(localStorage.getItem('promo_sort')) || { column: null, direction: 'asc' };
+
+function saveSortState() {
+    localStorage.setItem('promo_sort', JSON.stringify(sortState));
+}
+
+function sortTable(column, fromLoad = false) {
+    const table = document.getElementById('promoTable');
+    if (!table) return;
+    
+    const tbody = table.querySelector('tbody');
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+    
+    // Jika dari page load, gunakan state yang sudah ada
+    // Jika dari klik user, update state
+    if (!fromLoad) {
+        if (sortState.column === column) {
+            sortState.direction = sortState.direction === 'asc' ? 'desc' : 'asc';
+        } else {
+            sortState.column = column;
+            sortState.direction = 'asc';
+        }
+        saveSortState();
+    }
+    
+    const sortDirection = sortState.direction;
+    
+    // Reset semua icon sort
+    table.querySelectorAll('.sort-icon').forEach(icon => {
+        icon.className = 'fas fa-sort sort-icon';
+    });
+    
+    // Update icon kolom yang aktif
+    const currentHeader = table.querySelector(`.sortable[data-sort="${column}"]`);
+    if (currentHeader) {
+        const sortIcon = currentHeader.querySelector('.sort-icon');
+        if (sortIcon) {
+            sortIcon.className = sortDirection === 'asc' ? 'fas fa-sort-up sort-icon' : 'fas fa-sort-down sort-icon';
+        }
+    }
+    
+    // Sort rows berdasarkan data attribute
+    rows.sort((a, b) => {
+        let aValue, bValue;
+        
+        if (column === 'index') {
+            // Untuk index, selalu urutkan berdasarkan posisi awal (data-index asli)
+            aValue = parseInt(a.dataset.index) || 0;
+            bValue = parseInt(b.dataset.index) || 0;
+        } else if (column === 'name') {
+            aValue = (a.dataset.name || '').toLowerCase();
+            bValue = (b.dataset.name || '').toLowerCase();
+        } else if (column === 'discount') {
+            aValue = (a.dataset.discount || '').toLowerCase();
+            bValue = (b.dataset.discount || '').toLowerCase();
+        } else if (column === 'date') {
+            // Sort tanggal: yang kosong jadi paling belakang
+            aValue = a.dataset.date || '9999-99-99';
+            bValue = b.dataset.date || '9999-99-99';
+        } else if (column === 'status') {
+            aValue = parseInt(a.dataset.status) || 0;
+            bValue = parseInt(b.dataset.status) || 0;
+        } else {
+            return 0;
+        }
+        
+        if (sortDirection === 'asc') {
+            return aValue > bValue ? 1 : (aValue < bValue ? -1 : 0);
+        } else {
+            return aValue < bValue ? 1 : (aValue > bValue ? -1 : 0);
+        }
+    });
+    
+    // Re-append rows yang sudah di-sort
+    rows.forEach(row => tbody.appendChild(row));
+    
+    // Update nomor urut (mulai dari 1)
+    updateRowNumbers();
+}
+
+function updateRowNumbers() {
+    const rows = document.querySelectorAll('#promoTable tbody tr');
+    rows.forEach((row, index) => {
+        const numberCell = row.querySelector('td:first-child');
+        if (numberCell) {
+            numberCell.textContent = index + 1; // ✅ Mulai dari 1
+        }
+    });
+}
+
+function updateSortIcons() {
+    const table = document.getElementById('promoTable');
+    if (!table) return;
+    
+    // Reset semua icon
+    table.querySelectorAll('.sort-icon').forEach(icon => {
+        icon.className = 'fas fa-sort sort-icon';
+    });
+    
+    // Restore icon sesuai state tersimpan
+    if (sortState.column) {
+        const currentHeader = table.querySelector(`.sortable[data-sort="${sortState.column}"]`);
+        if (currentHeader) {
+            const sortIcon = currentHeader.querySelector('.sort-icon');
+            if (sortIcon) {
+                sortIcon.className = sortState.direction === 'asc' ? 'fas fa-sort-up sort-icon' : 'fas fa-sort-down sort-icon';
+            }
+        }
+    }
+}
+
+function applySavedSort() {
+    // ✅ PENTING: Apply sort hanya jika ada column yang tersimpan
+    if (sortState.column) {
+        // Gunakan fromLoad=true agar tidak toggle direction
+        sortTable(sortState.column, true);
+    }
+}
+
+// ========== EVENT LISTENERS ==========
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize view state dari localStorage
+    if (!isGridView) {
+        document.getElementById('gridView').classList.add('d-none');
+        document.getElementById('listView').classList.remove('d-none');
+        document.getElementById('viewIcon').className = 'fas fa-list';
+        document.getElementById('viewText').textContent = 'Grid View';
+    } else {
+        document.getElementById('gridView').classList.remove('d-none');
+        document.getElementById('listView').classList.add('d-none');
+        document.getElementById('viewIcon').className = 'fas fa-th-large';
+        document.getElementById('viewText').textContent = 'List View';
+    }
+    
+    // ✅ PENTING: Apply saved sort setelah DOM siap
+    // Ini akan re-sort data fresh dari server sesuai preferensi user
+    applySavedSort();
+    
+    // Sorting headers - klik user
+    document.querySelectorAll('#promoTable .sortable').forEach(header => {
+        header.addEventListener('click', function() {
+            const column = this.dataset.sort;
+            sortTable(column, false); // false = dari klik user, update state
+        });
+    });
+    
+    // Search & Filter
+    document.getElementById('searchPromo')?.addEventListener('keyup', function(e) {
+        const searchTerm = e.target.value.toLowerCase();
+        const statusFilter = document.getElementById('filterVisibility').value;
+        filterPromos(searchTerm, statusFilter);
+    });
+    
+    document.getElementById('filterVisibility')?.addEventListener('change', function(e) {
+        const status = e.target.value;
+        const searchTerm = document.getElementById('searchPromo').value.toLowerCase();
+        filterPromos(searchTerm, status);
+    });
+    
+    // Image Preview
+    document.getElementById('image')?.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        const preview = document.getElementById('imagePreview');
+        const previewImg = document.getElementById('previewImg');
+        
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                previewImg.src = event.target.result;
+                preview.style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        } else {
+            preview.style.display = 'none';
+        }
+    });
+    
+    // Expiry Badge Logic
+    initExpiryBadges();
+});
+
+// Reset Form
+function resetForm() {
+    document.getElementById('promoForm').reset();
+    document.getElementById('promo_id').value = '';
+    document.getElementById('promoModalLabel').textContent = 'Tambah Promo Baru';
+    document.getElementById('imagePreview').style.display = 'none';
+    document.getElementById('visible').checked = true;
+    document.getElementById('promoForm').action = "{{ url_for('promo.promo_add') }}";
+}
+
+// Edit Promo
+function editPromo(promoId) {
+    fetch(`/admin/promo/edit/${promoId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const item = data.data;
+                
+                document.getElementById('promo_id').value = item._id;
+                document.getElementById('title').value = item.title;
+                document.getElementById('description').value = item.description || '';
+                document.getElementById('discount').value = item.discount || '';
+                
+                if (item.valid_until) {
+                    const date = new Date(item.valid_until);
+                    const year = date.getFullYear();
+                    const month = String(date.getMonth() + 1).padStart(2, '0');
+                    const day = String(date.getDate()).padStart(2, '0');
+                    document.getElementById('valid_until').value = `${year}-${month}-${day}`;
+                }
+                
+                document.getElementById('visible').checked = item.visible !== false;
+                document.getElementById('promoModalLabel').textContent = 'Edit Promo';
+                document.getElementById('promoForm').action = `/admin/promo/update/${promoId}`;
+                
+                if (item.image_url) {
+                    document.getElementById('previewImg').src = item.image_url;
+                    document.getElementById('imagePreview').style.display = 'block';
+                } else {
+                    document.getElementById('imagePreview').style.display = 'none';
+                }
+                
+                const modal = new bootstrap.Modal(document.getElementById('promoModal'));
+                modal.show();
+            } else {
+                alert('Gagal memuat data promo: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Terjadi kesalahan: ' + error.message);
+        });
+}
+
+// Confirm Delete
+function confirmDelete(promoName) {
+    return confirm(`Apakah Anda yakin ingin menghapus promo "${promoName}"?\n\nTindakan ini tidak dapat dibatalkan.`);
+}
+
+// Filter Function
+function filterPromos(searchTerm, status) {
+    const cards = document.querySelectorAll('#gridView .col-md-4');
+    const rows = document.querySelectorAll('#promoTable tbody tr');
+    
+    cards.forEach(card => {
+        const name = card.dataset.name;
+        const stat = card.dataset.status;
+        const matchesSearch = name.includes(searchTerm);
+        const matchesStatus = status === '' || stat === status;
+        card.style.display = (matchesSearch && matchesStatus) ? 'block' : 'none';
+    });
+    
+    rows.forEach(row => {
+        const name = row.dataset.name;
+        const stat = row.dataset.status;
+        const matchesSearch = name.includes(searchTerm);
+        const matchesStatus = status === '' || stat === status;
+        row.style.display = (matchesSearch && matchesStatus) ? '' : 'none';
+    });
+}
+
+// Expiry Badge Logic
+function initExpiryBadges() {
+    const TODAY = new Date();
+    TODAY.setHours(0, 0, 0, 0);
+    const SOON_DAYS = 3;
+    
+    function parseDate(dateStr) {
+        if (!dateStr) return null;
+        const parts = dateStr.split('T')[0].split('-');
+        if (parts.length === 3) {
+            return new Date(parts[0], parts[1] - 1, parts[2]);
+        }
+        return null;
+    }
+    
+    function updateExpiryBadge(element) {
+        const dateStr = element.getAttribute('data-valid-until');
+        if (!dateStr) return;
+        
+        const validDate = parseDate(dateStr);
+        if (!validDate) return;
+        
+        const badge = element.querySelector('.promo-expiry-badge');
+        const dateText = element.querySelector('.expiry-date-text');
+        if (!badge) return;
+        
+        const diffTime = validDate - TODAY;
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        
+        badge.classList.remove('expiry-active', 'expiry-soon', 'expiry-expired');
+        
+        if (diffTime < 0) {
+            badge.textContent = 'Expired';
+            badge.classList.add('expiry-expired');
+            if (dateText) {
+                dateText.style.color = '#dc3545';
+                dateText.style.fontWeight = '600';
+            }
+        } else if (diffDays <= SOON_DAYS) {
+            badge.textContent = diffDays === 0 ? 'Hari ini!' : `${diffDays} hari lagi`;
+            badge.classList.add('expiry-soon');
+            if (dateText) {
+                dateText.style.color = '#ffc107';
+                dateText.style.fontWeight = '600';
+            }
+        } else {
+            badge.textContent = 'Aktif';
+            badge.classList.add('expiry-active');
+        }
+    }
+    
+    document.querySelectorAll('#gridView [data-valid-until]').forEach(el => updateExpiryBadge(el));
+    document.querySelectorAll('#promoTable tbody tr[data-valid-until]').forEach(el => updateExpiryBadge(el));
+}
+</script>
+
+<style>
+.page-title { margin-bottom: 1.5rem; }
+.card-img-top { border-top-left-radius: 0.375rem; border-top-right-radius: 0.375rem; }
+.badge { font-weight: 500; }
+.input-group-text { background-color: #f8f9fa; border-right: none; }
+.form-control:focus + .input-group-text, .input-group-text:focus { border-color: #86b7fe; }
+.col-md-4 { transition: transform 0.2s, box-shadow 0.2s; }
+.col-md-4:hover { transform: translateY(-5px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+.table th { font-weight: 600; background-color: #f8f9fa; cursor: pointer; user-select: none; }
+.table td { vertical-align: middle; }
+.sort-icon { margin-left: 5px; font-size: 0.8em; color: #6c757d; }
+.sortable { cursor: pointer; }
+.sortable:hover { background-color: #e9ecef; }
+.sortable .sort-icon { display: inline; }
+@media (max-width: 768px) { .card-footer { padding: 0.75rem; } .btn-sm { padding: 0.25rem 0.5rem; font-size: 0.875rem; } .text-md-end { text-align: center !important; } .btn { margin-bottom: 0.5rem; } }
+.list-group-item { transition: background-color 0.2s; }
+.list-group-item:hover { background-color: #f8f9fa; }
+</style>
+{% endblock %}
