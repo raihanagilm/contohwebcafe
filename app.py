@@ -1,5 +1,5 @@
 """
-Cafe CMS - Main Application (Streamlit Compatible)
+Cafe CMS - Main Application (Flask + Streamlit Admin Access)
 """
 
 from flask import Flask, render_template
@@ -18,15 +18,14 @@ from routes import (
     social_bp
 )
 
-import os
 import base64
-
-# ================= STREAMLIT IMPORT =================
-import streamlit as st
 import threading
 import time
 
-# ================= FLASK APP FACTORY =================
+# ================= STREAMLIT =================
+import streamlit as st
+
+# ================= FLASK APP =================
 def create_app():
     app = Flask(__name__)
     
@@ -123,29 +122,42 @@ def create_app():
     return app
 
 
-# ================= START FLASK BACKGROUND =================
+# ================= RUN FLASK BACKGROUND =================
 def run_flask():
     app = create_app()
     app.run(host='0.0.0.0', port=5000, debug=False, use_reloader=False)
 
 
-# ================= STREAMLIT MAIN =================
+# ================= RUN STREAMLIT =================
 def run_streamlit():
+    st.set_page_config(layout="wide")
 
+    # Jalankan Flask sekali saja
     if "flask_started" not in st.session_state:
         thread = threading.Thread(target=run_flask)
         thread.daemon = True
         thread.start()
         st.session_state.flask_started = True
         time.sleep(2)
-    st.components.v1.iframe("http://localhost:5000", height=900)
+
+    # LANGSUNG TAMPIL ADMIN (tanpa UI tambahan)
+    st.components.v1.iframe(
+        "http://localhost:5000/admin",
+        height=1000,
+        scrolling=True
+    )
 
 
 # ================= ENTRY POINT =================
 if __name__ == "__main__":
-    # Cek apakah dijalankan via Streamlit
-    if st.runtime.exists():
-        run_streamlit()
-    else:
+    try:
+        # Kalau dijalankan via Streamlit
+        if st.runtime.exists():
+            run_streamlit()
+        else:
+            app = create_app()
+            app.run(host='0.0.0.0', port=5000, debug=True)
+    except:
+        # Fallback kalau bukan Streamlit
         app = create_app()
         app.run(host='0.0.0.0', port=5000, debug=True)
