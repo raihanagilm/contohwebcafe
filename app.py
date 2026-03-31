@@ -1,5 +1,5 @@
 """
-Cafe CMS - Main Application (Flask + Streamlit Admin Access)
+Cafe CMS - Main Application (Streamlit Customer + Admin Switch)
 """
 
 from flask import Flask, render_template
@@ -21,11 +21,9 @@ from routes import (
 import base64
 import threading
 import time
-
-# ================= STREAMLIT =================
 import streamlit as st
 
-# ================= FLASK APP =================
+# ================= FLASK =================
 def create_app():
     app = Flask(__name__)
     
@@ -36,7 +34,6 @@ def create_app():
     db.create_default_admin()
     app.db = db
 
-    # ================= FILTERS =================
     @app.template_filter('b64encode')
     def base64_encode_filter(data):
         if data is None:
@@ -49,35 +46,15 @@ def create_app():
     def datetimeformat_filter(value, format='%d %B %Y'):
         if not value:
             return '-'
-
         if hasattr(value, 'strftime'):
             return value.strftime(format)
-
         if isinstance(value, str):
             try:
                 return datetime.strptime(value, '%Y-%m-%d').strftime(format)
             except:
                 return value
-
         return str(value)
 
-    @app.template_filter('is_promo_active')
-    def is_promo_active_filter(valid_until):
-        if not valid_until:
-            return True
-
-        if hasattr(valid_until, 'strftime'):
-            return valid_until > datetime.now()
-
-        if isinstance(valid_until, str):
-            try:
-                return datetime.strptime(valid_until, '%Y-%m-%d') > datetime.now()
-            except:
-                return True
-
-        return True
-
-    # ================= CONTEXT =================
     @app.context_processor
     def inject_globals():
         return dict(
@@ -89,17 +66,13 @@ def create_app():
     def inject_now():
         return {'now': datetime.now}
 
-    # ================= VISITOR LOG =================
     @app.before_request
     def log_visitor():
         from flask import request
-
         if request.path.startswith('/static/') or request.path.startswith('/admin'):
             return
-
         db.log_visitor(request.remote_addr)
 
-    # ================= ERROR HANDLER =================
     @app.errorhandler(404)
     def not_found_error(error):
         return render_template('404.html'), 404
@@ -108,7 +81,6 @@ def create_app():
     def internal_error(error):
         return render_template('500.html'), 500
 
-    # ================= BLUEPRINT =================
     app.register_blueprint(auth_bp, url_prefix='/admin')
     app.register_blueprint(about_bp, url_prefix='/admin')
     app.register_blueprint(dashboard_bp, url_prefix='/admin')
@@ -122,17 +94,16 @@ def create_app():
     return app
 
 
-# ================= RUN FLASK BACKGROUND =================
+# ================= RUN FLASK =================
 def run_flask():
     app = create_app()
     app.run(host='0.0.0.0', port=5000, debug=False, use_reloader=False)
 
 
-# ================= RUN STREAMLIT =================
+# ================= STREAMLIT =================
 def run_streamlit():
     st.set_page_config(layout="wide")
 
-    # Jalankan Flask sekali saja
     if "flask_started" not in st.session_state:
         thread = threading.Thread(target=run_flask)
         thread.daemon = True
@@ -140,24 +111,25 @@ def run_streamlit():
         st.session_state.flask_started = True
         time.sleep(2)
 
-    # LANGSUNG TAMPIL ADMIN (tanpa UI tambahan)
-    st.components.v1.iframe(
-        "http://localhost:5000/admin",
-        height=1000,
-        scrolling=True
-    )
+    # 🔥 SWITCH HALAMAN
+    mode = st.radio("", ["Customer", "Admin"], horizontal=True)
+
+    if mode == "Customer":
+        url = "http://localhost:5000/"
+    else:
+        url = "http://localhost:5000/admin"
+
+    st.components.v1.iframe(url, height=1000, scrolling=True)
 
 
-# ================= ENTRY POINT =================
+# ================= ENTRY =================
 if __name__ == "__main__":
     try:
-        # Kalau dijalankan via Streamlit
         if st.runtime.exists():
             run_streamlit()
         else:
             app = create_app()
             app.run(host='0.0.0.0', port=5000, debug=True)
     except:
-        # Fallback kalau bukan Streamlit
         app = create_app()
         app.run(host='0.0.0.0', port=5000, debug=True)
