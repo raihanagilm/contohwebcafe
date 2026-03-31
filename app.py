@@ -1,5 +1,5 @@
 """
-Cafe CMS - Main Application (Streamlit + Fix Admin Login)
+Cafe CMS - Main Application (Flask + Streamlit FIXED)
 """
 
 from flask import Flask, render_template
@@ -21,20 +21,22 @@ from routes import (
 import base64
 import threading
 import time
+import socket
 import streamlit as st
+
 
 # ================= FLASK =================
 def create_app():
     app = Flask(__name__)
-    
+
     app.config.from_object(Config)
     Config.init_app(app)
-    
+
     db = CafeDB(app.config['MONGODB_URI'], app.config['MONGODB_DATABASE'])
     db.create_default_admin()
     app.db = db
 
-    # ================= FILTERS =================
+    # ================= FILTER =================
     @app.template_filter('b64encode')
     def base64_encode_filter(data):
         if data is None:
@@ -67,7 +69,7 @@ def create_app():
     def inject_now():
         return {'now': datetime.now}
 
-    # ================= VISITOR LOG =================
+    # ================= VISITOR =================
     @app.before_request
     def log_visitor():
         from flask import request
@@ -84,7 +86,7 @@ def create_app():
     def internal_error(error):
         return render_template('500.html'), 500
 
-    # ================= BLUEPRINT =================
+    # ================= ROUTES =================
     app.register_blueprint(auth_bp, url_prefix='/admin')
     app.register_blueprint(about_bp, url_prefix='/admin')
     app.register_blueprint(dashboard_bp, url_prefix='/admin')
@@ -98,37 +100,58 @@ def create_app():
     return app
 
 
+# ================= AUTO PORT =================
+def get_free_port(start=5000):
+    port = start
+    while True:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            if s.connect_ex(('localhost', port)) != 0:
+                return port
+        port += 1
+
+
 # ================= RUN FLASK =================
-def run_flask():
+def run_flask(port):
     app = create_app()
-    app.run(host='0.0.0.0', port=5000, debug=False, use_reloader=False)
+    app.run(host='0.0.0.0', port=port, debug=False, use_reloader=False)
 
 
 # ================= STREAMLIT =================
 def run_streamlit():
     st.set_page_config(layout="wide")
 
-    # Jalankan Flask sekali
+    # Start Flask sekali saja
     if "flask_started" not in st.session_state:
-        thread = threading.Thread(target=run_flask)
+        port = get_free_port()
+        st.session_state.flask_port = port
+
+        thread = threading.Thread(target=run_flask, args=(port,))
         thread.daemon = True
         thread.start()
+
         st.session_state.flask_started = True
         time.sleep(2)
 
-    # ================= NAVIGATION =================
-    mode = st.radio("", ["Customer", "Admin"], horizontal=True)
+    # Navigation (fix warning)
+    mode = st.radio(
+        "Navigation",
+        ["Customer", "Admin"],
+        horizontal=True,
+        label_visibility="collapsed"
+    )
+
+    base_url = f"http://localhost:{st.session_state.flask_port}"
 
     if mode == "Customer":
         st.components.v1.iframe(
-            "http://localhost:5000/",
+            f"{base_url}/",
             height=1000,
             scrolling=True
         )
     else:
-        # 🔥 ADMIN DIBUKA TAB BARU (BIAR LOGIN BERHASIL)
+        # 🔥 ADMIN TANPA IFRAME (BIAR LOGIN BERHASIL)
         st.markdown(
-            '<meta http-equiv="refresh" content="0; url=http://localhost:5000/admin">',
+            f'<meta http-equiv="refresh" content="0; url={base_url}/admin">',
             unsafe_allow_html=True
         )
 
