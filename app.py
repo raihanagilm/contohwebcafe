@@ -1,5 +1,5 @@
 """
-Cafe CMS - Main Application (Streamlit Customer + Admin Switch)
+Cafe CMS - Main Application (Streamlit + Fix Admin Login)
 """
 
 from flask import Flask, render_template
@@ -34,6 +34,7 @@ def create_app():
     db.create_default_admin()
     app.db = db
 
+    # ================= FILTERS =================
     @app.template_filter('b64encode')
     def base64_encode_filter(data):
         if data is None:
@@ -66,6 +67,7 @@ def create_app():
     def inject_now():
         return {'now': datetime.now}
 
+    # ================= VISITOR LOG =================
     @app.before_request
     def log_visitor():
         from flask import request
@@ -73,6 +75,7 @@ def create_app():
             return
         db.log_visitor(request.remote_addr)
 
+    # ================= ERROR =================
     @app.errorhandler(404)
     def not_found_error(error):
         return render_template('404.html'), 404
@@ -81,6 +84,7 @@ def create_app():
     def internal_error(error):
         return render_template('500.html'), 500
 
+    # ================= BLUEPRINT =================
     app.register_blueprint(auth_bp, url_prefix='/admin')
     app.register_blueprint(about_bp, url_prefix='/admin')
     app.register_blueprint(dashboard_bp, url_prefix='/admin')
@@ -104,6 +108,7 @@ def run_flask():
 def run_streamlit():
     st.set_page_config(layout="wide")
 
+    # Jalankan Flask sekali
     if "flask_started" not in st.session_state:
         thread = threading.Thread(target=run_flask)
         thread.daemon = True
@@ -111,15 +116,21 @@ def run_streamlit():
         st.session_state.flask_started = True
         time.sleep(2)
 
-    # 🔥 SWITCH HALAMAN
+    # ================= NAVIGATION =================
     mode = st.radio("", ["Customer", "Admin"], horizontal=True)
 
     if mode == "Customer":
-        url = "http://localhost:5000/"
+        st.components.v1.iframe(
+            "http://localhost:5000/",
+            height=1000,
+            scrolling=True
+        )
     else:
-        url = "http://localhost:5000/admin"
-
-    st.components.v1.iframe(url, height=1000, scrolling=True)
+        # 🔥 ADMIN DIBUKA TAB BARU (BIAR LOGIN BERHASIL)
+        st.markdown(
+            '<meta http-equiv="refresh" content="0; url=http://localhost:5000/admin">',
+            unsafe_allow_html=True
+        )
 
 
 # ================= ENTRY =================
