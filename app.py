@@ -131,8 +131,6 @@ def run_flask():
 
 # ================= STREAMLIT MAIN =================
 def run_streamlit():
-    st.set_page_config(layout="wide")
-    st.title("☕ Cafe CMS")
 
     if "flask_started" not in st.session_state:
         thread = threading.Thread(target=run_flask)
@@ -140,9 +138,6 @@ def run_streamlit():
         thread.start()
         st.session_state.flask_started = True
         time.sleep(2)
-
-    st.success("Website berjalan di dalam Streamlit")
-
     st.components.v1.iframe("http://localhost:5000", height=900)
 
 
